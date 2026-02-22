@@ -15,8 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pages: write
-      id-token: write
       pull-requests: write
 
     steps:
@@ -40,86 +38,6 @@ jobs:
             console.log(`Found PR #${prs[0].number}`);
             return String(prs[0].number);
 
-      - name: Checkout main branch (production content)
+      - name: Echo test (no Pages deploy)
         if: steps.find_pr.outputs.result != ''
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          path: staging
-
-      - name: Checkout PR branch (preview content)
-        if: steps.find_pr.outputs.result != ''
-        uses: actions/checkout@v4
-        with:
-          path: pr-content
-
-      - name: Prepare preview subdirectory
-        if: steps.find_pr.outputs.result != ''
-        run: |
-          PR_NUMBER="${{ steps.find_pr.outputs.result }}"
-          mkdir -p staging/pr-${PR_NUMBER}
-          cp -r pr-content/. staging/pr-${PR_NUMBER}/
-          rm -rf staging/pr-${PR_NUMBER}/.git
-          rm -rf staging/.git
-
-      - name: Setup Pages
-        if: steps.find_pr.outputs.result != ''
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        if: steps.find_pr.outputs.result != ''
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: staging
-
-      - name: Deploy to GitHub Pages
-        if: steps.find_pr.outputs.result != ''
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-      - name: Comment PR with preview link
-        if: steps.find_pr.outputs.result != ''
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const prNumber = parseInt('${{ steps.find_pr.outputs.result }}');
-            const repo = context.repo;
-            const previewUrl = `https://${repo.owner}.github.io/${repo.repo}/pr-${prNumber}/`;
-
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: repo.owner,
-              repo: repo.repo,
-              issue_number: prNumber,
-            });
-
-            const botComment = comments.find(comment =>
-              comment.user.type === 'Bot' &&
-              comment.body.includes('Preview deployment')
-            );
-
-            const commentBody = `## 🚀 Preview Deployment
-
-Your preview deployment is ready!
-
-**Preview URL:** ${previewUrl}
-
-Changes will be reflected in the preview as you push new commits.
-
----
-*This preview will be automatically cleaned up when the PR is merged or closed.*`;
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: repo.owner,
-                repo: repo.repo,
-                comment_id: botComment.id,
-                body: commentBody,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: repo.owner,
-                repo: repo.repo,
-                issue_number: prNumber,
-                body: commentBody,
-              });
-            }
+        run: echo "Would deploy preview for PR ${{ steps.find_pr.outputs.result }}"
