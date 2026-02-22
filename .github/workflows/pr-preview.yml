@@ -1,17 +1,18 @@
 name: PR Preview Deployment
 
 on:
-  pull_request_target:
-    types: [opened, synchronize, reopened, closed]
+  push:
+    branches-ignore:
+      - main
+      - gh-pages
 
 concurrency:
-  group: preview-${{ github.event.pull_request.number }}
+  group: preview-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   deploy-preview:
     runs-on: ubuntu-latest
-    if: github.event.action != 'closed'
     permissions:
       contents: read
       pages: write
@@ -19,46 +20,72 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Find open PR for this branch
+        id: find_pr
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${branch}`,
+              state: 'open',
+            });
+            if (prs.length === 0) {
+              console.log(`No open PR for branch ${branch}, skipping preview`);
+              return '';
+            }
+            console.log(`Found PR #${prs[0].number}`);
+            return String(prs[0].number);
+
       - name: Checkout main branch (production content)
+        if: steps.find_pr.outputs.result != ''
         uses: actions/checkout@v4
         with:
           ref: main
           path: staging
 
       - name: Checkout PR branch (preview content)
+        if: steps.find_pr.outputs.result != ''
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
           path: pr-content
 
       - name: Prepare preview subdirectory
+        if: steps.find_pr.outputs.result != ''
         run: |
-          mkdir -p staging/pr-${{ github.event.pull_request.number }}
-          cp -r pr-content/. staging/pr-${{ github.event.pull_request.number }}/
-          rm -rf staging/pr-${{ github.event.pull_request.number }}/.git
+          PR_NUMBER="${{ steps.find_pr.outputs.result }}"
+          mkdir -p staging/pr-${PR_NUMBER}
+          cp -r pr-content/. staging/pr-${PR_NUMBER}/
+          rm -rf staging/pr-${PR_NUMBER}/.git
           rm -rf staging/.git
 
       - name: Setup Pages
+        if: steps.find_pr.outputs.result != ''
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
+        if: steps.find_pr.outputs.result != ''
         uses: actions/upload-pages-artifact@v3
         with:
           path: staging
 
       - name: Deploy to GitHub Pages
+        if: steps.find_pr.outputs.result != ''
         id: deployment
         uses: actions/deploy-pages@v4
 
       - name: Comment PR with preview link
+        if: steps.find_pr.outputs.result != ''
         uses: actions/github-script@v7
         with:
           script: |
-            const prNumber = context.payload.pull_request.number;
+            const prNumber = parseInt('${{ steps.find_pr.outputs.result }}');
             const repo = context.repo;
             const previewUrl = `https://${repo.owner}.github.io/${repo.repo}/pr-${prNumber}/`;
 
-            // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({
               owner: repo.owner,
               repo: repo.repo,
@@ -79,10 +106,9 @@ Your preview deployment is ready!
 Changes will be reflected in the preview as you push new commits.
 
 ---
-*This preview will be automatically cleaned up when the PR is closed or merged.*`;
+*This preview will be automatically cleaned up when the PR is merged or closed.*`;
 
             if (botComment) {
-              // Update existing comment
               await github.rest.issues.updateComment({
                 owner: repo.owner,
                 repo: repo.repo,
@@ -90,7 +116,6 @@ Changes will be reflected in the preview as you push new commits.
                 body: commentBody,
               });
             } else {
-              // Create new comment
               await github.rest.issues.createComment({
                 owner: repo.owner,
                 repo: repo.repo,
@@ -98,42 +123,3 @@ Changes will be reflected in the preview as you push new commits.
                 body: commentBody,
               });
             }
-
-  cleanup-preview:
-    runs-on: ubuntu-latest
-    if: github.event.action == 'closed'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-      pull-requests: write
-
-    steps:
-      - name: Checkout main branch
-        uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact (main only, removes PR preview)
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
-
-      - name: Comment on PR
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const prNumber = context.payload.pull_request.number;
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: '🧹 Preview deployment has been cleaned up.',
-            });
