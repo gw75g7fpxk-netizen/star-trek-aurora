@@ -245,7 +245,7 @@ const EnemyConfig = {
     romulanWarbird: {
         health: 20,
         shields: 10,
-        speed: 122,
+        speed: 110,
         fireRate: 1100,
         bulletSpeed: 280,
         damage: 1,
