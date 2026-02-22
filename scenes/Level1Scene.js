@@ -3750,7 +3750,7 @@ class Level1Scene extends Phaser.Scene {
                 break;
             }
             case 'chase': {
-                // Horizontal-only chase: follow the player's X, fixed Y at bottom of screen
+                // Horizontal-only chase: follow the player's X, fixed Y at spawn fraction position
                 // (used by Romulan warbird in level 7)
                 if (!this.player || !this.player.active) break;
                 const config = EnemyConfig[enemy.enemyType];
@@ -3759,9 +3759,8 @@ class Level1Scene extends Phaser.Scene {
                 const dx = this.player.x - enemy.x;
                 enemy.body.setVelocityX(Math.abs(dx) < 10 ? 0 : Math.sign(dx) * speed);
                 enemy.body.setVelocityY(0);
-                // Lock Y to the bottom of the screen (max vertical position, fully visible)
-                const halfH = enemy.displayHeight / 2;
-                enemy.y = this.cameraHeight - halfH;
+                // Lock Y using the same spawn fraction so the warbird stays fully visible on mobile
+                enemy.y = this.cameraHeight * WARBIRD_SPAWN_Y_FRACTION;
                 break;
             }
         }
