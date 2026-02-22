@@ -7,29 +7,52 @@ on:
 concurrency:
   group: preview-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
-  
+
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
   pull-requests: write
 
 jobs:
   deploy-preview:
     runs-on: ubuntu-latest
     if: github.event.action != 'closed'
-    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
-      - name: Checkout PR branch
+      - name: Checkout main branch (production content)
         uses: actions/checkout@v4
-      
-      - name: Deploy PR preview to subdirectory
-        uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
-          destination_dir: pr-${{ github.event.pull_request.number }}
-          keep_files: true
-          exclude_assets: '.github,.git'
-      
+          ref: main
+          path: staging
+
+      - name: Checkout PR branch (preview content)
+        uses: actions/checkout@v4
+        with:
+          path: pr-content
+
+      - name: Prepare preview subdirectory
+        run: |
+          mkdir -p staging/pr-${{ github.event.pull_request.number }}
+          cp -r pr-content/. staging/pr-${{ github.event.pull_request.number }}/
+          rm -rf staging/pr-${{ github.event.pull_request.number }}/.git
+          rm -rf staging/.git
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: staging
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
       - name: Comment PR with preview link
         uses: actions/github-script@v7
         with:
@@ -37,30 +60,30 @@ jobs:
             const prNumber = context.payload.pull_request.number;
             const repo = context.repo;
             const previewUrl = `https://${repo.owner}.github.io/${repo.repo}/pr-${prNumber}/`;
-            
+
             // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({
               owner: repo.owner,
               repo: repo.repo,
               issue_number: prNumber,
             });
-            
-            const botComment = comments.find(comment => 
-              comment.user.type === 'Bot' && 
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
               comment.body.includes('Preview deployment')
             );
-            
+
             const commentBody = `## 🚀 Preview Deployment
-            
-            Your preview deployment is ready!
-            
-            **Preview URL:** ${previewUrl}
-            
-            Changes will be reflected in the preview as you push new commits.
-            
-            ---
-            *This preview will be automatically cleaned up when the PR is closed or merged.*`;
-            
+
+Your preview deployment is ready!
+
+**Preview URL:** ${previewUrl}
+
+Changes will be reflected in the preview as you push new commits.
+
+---
+*This preview will be automatically cleaned up when the PR is closed or merged.*`;
+
             if (botComment) {
               // Update existing comment
               await github.rest.issues.updateComment({
@@ -78,36 +101,36 @@ jobs:
                 body: commentBody,
               });
             }
-  
+
   cleanup-preview:
     runs-on: ubuntu-latest
     if: github.event.action == 'closed'
-    
+    environment:
+      name: github-pages
+
     steps:
-      - name: Checkout gh-pages branch
+      - name: Checkout main branch
         uses: actions/checkout@v4
         with:
-          ref: gh-pages
-      
-      - name: Remove preview directory
-        run: |
-          if [ -d "pr-${{ github.event.pull_request.number }}" ]; then
-            rm -rf pr-${{ github.event.pull_request.number }}
-            git config user.name github-actions[bot]
-            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            git add .
-            git commit -m "Remove preview for PR #${{ github.event.pull_request.number }}" || echo "No changes to commit"
-            git push origin gh-pages || echo "Push failed, possibly no changes"
-          else
-            echo "Preview directory pr-${{ github.event.pull_request.number }} does not exist, skipping cleanup"
-          fi
-      
+          ref: main
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact (main only, removes PR preview)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+
       - name: Comment on PR
         uses: actions/github-script@v7
         with:
           script: |
             const prNumber = context.payload.pull_request.number;
-            
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
