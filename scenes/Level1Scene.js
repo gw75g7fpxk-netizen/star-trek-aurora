@@ -99,7 +99,7 @@ const WARBIRD_CLOAK_FADE_DURATION = 2000; // Milliseconds for fade-in/out during
 const WARBIRD_CLOAK_MAX_COUNT = 3;        // Number of times warbird cloaks during the battle
 const WARBIRD_CLOAK_HEALTH_FRACTION = 0.5; // Triggers at 50% of total health+shields
 const WARBIRD_INITIAL_DECLOAK_DELAY = 750; // Milliseconds after spawn before the warbird decloaks
-const WARBIRD_SPAWN_Y_FRACTION = 0.65;    // Y position as fraction of screen height (ensures full visibility on mobile)
+const WARBIRD_SPAWN_Y_FRACTION = 0.65;    // Y position as fraction of screen height (ensures full ship visibility on mobile)
 
 // USS Sentinel constants for Level 5
 const SENTINEL_Y_FRACTION = 0.85; // Y position as fraction of screen height
