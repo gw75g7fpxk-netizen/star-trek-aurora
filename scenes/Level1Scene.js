@@ -99,7 +99,7 @@ const WARBIRD_CLOAK_FADE_DURATION = 2000; // Milliseconds for fade-in/out during
 const WARBIRD_CLOAK_MAX_COUNT = 3;        // Number of times warbird cloaks during the battle
 const WARBIRD_CLOAK_HEALTH_FRACTION = 0.5; // Triggers at 50% of total health+shields
 const WARBIRD_INITIAL_DECLOAK_DELAY = 750; // Milliseconds after spawn before the warbird decloaks
-const WARBIRD_SPAWN_Y_FRACTION = 0.825;   // Y position as fraction of screen height (ensures the warbird is fully visible on mobile)
+const WARBIRD_SPAWN_BOTTOM_MARGIN = 20;   // Pixels between bottom of warbird sprite and screen edge at spawn
 
 // USS Sentinel constants for Level 5
 const SENTINEL_Y_FRACTION = 0.85; // Y position as fraction of screen height
@@ -2518,8 +2518,8 @@ class Level1Scene extends Phaser.Scene {
             
             // Romulan warbird (Level 7): spawn cloaked at the max vertical position (bottom of screen)
             if (enemyType === 'romulanWarbird') {
-                // Position warbird so the entire ship is visible on mobile
-                enemy.y = this.cameraHeight * WARBIRD_SPAWN_Y_FRACTION;
+                // Position warbird so its bottom edge is WARBIRD_SPAWN_BOTTOM_MARGIN pixels above the screen bottom
+                enemy.y = this.cameraHeight - enemy.displayHeight / 2 - WARBIRD_SPAWN_BOTTOM_MARGIN;
                 // Start fully cloaked (invisible, no collision)
                 enemy.setAlpha(0);
                 enemy.isCloaked = true;
