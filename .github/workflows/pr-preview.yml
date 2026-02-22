@@ -8,19 +8,15 @@ concurrency:
   group: preview-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-  pull-requests: write
-
 jobs:
   deploy-preview:
     runs-on: ubuntu-latest
     if: github.event.action != 'closed'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      pull-requests: write
 
     steps:
       - name: Checkout main branch (production content)
@@ -105,8 +101,11 @@ Changes will be reflected in the preview as you push new commits.
   cleanup-preview:
     runs-on: ubuntu-latest
     if: github.event.action == 'closed'
-    environment:
-      name: github-pages
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      pull-requests: write
 
     steps:
       - name: Checkout main branch
