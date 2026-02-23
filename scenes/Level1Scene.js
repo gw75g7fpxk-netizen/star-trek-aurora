@@ -1197,6 +1197,9 @@ class Level1Scene extends Phaser.Scene {
                 this.lastShieldRecharge = time;
                 console.log('Shield recharged! Current shields:', this.playerStats.shields);
             }
+        } else {
+            // Shields are full — keep timer current so the 30s countdown only begins after first damage
+            this.lastShieldRecharge = time;
         }
     }
     
@@ -1524,8 +1527,6 @@ class Level1Scene extends Phaser.Scene {
             this.showShieldImpact();
             
             this.playerStats.shields -= amount;
-            // Reset recharge timer so the 30s countdown restarts after each hit
-            this.lastShieldRecharge = this.time.now;
             if (this.playerStats.shields < 0) {
                 const overflow = Math.abs(this.playerStats.shields);
                 this.playerStats.shields = 0;
