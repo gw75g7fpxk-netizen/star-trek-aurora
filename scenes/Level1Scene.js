@@ -130,6 +130,9 @@ const SENTINEL_BEAM_ORIGIN_OFFSET = 20;      // Y offset above Sentinel for beam
 
 // Extra padding (px) above browser chrome when computing safe area for touch controls
 const CHROME_PADDING_OFFSET = 60;
+// Safe area offset (px) applied in mobile browser mode (non-standalone) to clear
+// the Safari/Chrome bottom toolbar (~44px) + home indicator (~34px) + button radius (~50px)
+const MOBILE_BROWSER_CHROME_SAFE_AREA = 180;
 
 class Level1Scene extends Phaser.Scene {
     constructor() {
@@ -370,7 +373,20 @@ class Level1Scene extends Phaser.Scene {
                     - window.visualViewport.height
                     - (window.visualViewport.offsetTop || 0)
             );
-            return Math.max(bottomChrome + CHROME_PADDING_OFFSET, this.safeAreaOffset);
+            if (bottomChrome > 0) {
+                return Math.max(bottomChrome + CHROME_PADDING_OFFSET, this.safeAreaOffset);
+            }
+        }
+        // Fallback for iOS Safari: visualViewport.height equals window.innerHeight so
+        // bottomChrome is 0, yet the toolbar still overlays the canvas content.
+        // Detect mobile browser mode (non-standalone) and use a larger fixed offset
+        // that clears the ~44px toolbar + ~34px home indicator + button radius.
+        if (this.isMobileDevice) {
+            const isStandalone = window.navigator.standalone === true ||
+                window.matchMedia('(display-mode: standalone)').matches;
+            if (!isStandalone) {
+                return Math.max(this.safeAreaOffset, MOBILE_BROWSER_CHROME_SAFE_AREA);
+            }
         }
         return this.safeAreaOffset;
     }
