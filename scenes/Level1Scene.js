@@ -2589,7 +2589,7 @@ class Level1Scene extends Phaser.Scene {
             // Romulan warbird (Level 7): spawn cloaked at the max vertical position (bottom of screen)
             if (enemyType === 'romulanWarbird') {
                 // Position warbird so its bottom edge is WARBIRD_SPAWN_BOTTOM_MARGIN pixels above the screen bottom
-                enemy.y = this.cameraHeight - enemy.displayHeight / 2 - WARBIRD_SPAWN_BOTTOM_MARGIN;
+                enemy.y = this.cameraHeight - enemy.displayHeight - WARBIRD_SPAWN_BOTTOM_MARGIN;
                 // Start fully cloaked (invisible, no collision)
                 enemy.setAlpha(0);
                 enemy.isCloaked = true;
@@ -3830,7 +3830,7 @@ class Level1Scene extends Phaser.Scene {
                 enemy.body.setVelocityX(Math.abs(dx) < 10 ? 0 : Math.sign(dx) * speed);
                 enemy.body.setVelocityY(0);
                 // Lock Y to the same position as spawn: bottom edge WARBIRD_SPAWN_BOTTOM_MARGIN above screen edge
-                enemy.y = this.cameraHeight - enemy.displayHeight / 2 - WARBIRD_SPAWN_BOTTOM_MARGIN;
+                enemy.y = this.cameraHeight - enemy.displayHeight - WARBIRD_SPAWN_BOTTOM_MARGIN;
                 break;
             }
         }
