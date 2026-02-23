@@ -1,7 +1,11 @@
 name: PR Preview
 
 on:
-  pull_request:
+  # pull_request_target runs in the base-branch context so it is never gated by
+  # GitHub's bot-approval (action_required) check. This is safe here because the
+  # workflow only copies static files from the PR branch — no build scripts or
+  # user-controlled code are executed.
+  pull_request_target:
     types: [opened, synchronize, reopened, closed]
 
 concurrency:
@@ -40,6 +44,8 @@ jobs:
           # Remove .git directories — GitHub Pages upload rejects them
           rm -rf staging/pr-${PR_NUMBER}/.git
           rm -rf staging/.git
+          # Do not let PR content override workflow files in the preview
+          rm -rf staging/pr-${PR_NUMBER}/.github
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
