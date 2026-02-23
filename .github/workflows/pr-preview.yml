@@ -101,16 +101,18 @@ jobs:
               comment.body.includes('Preview deployment')
             );
 
-            const commentBody = `## 🚀 Preview Deployment
-
-Your preview deployment is ready!
-
-**Preview URL:** ${previewUrl}
-
-Changes will be reflected in the preview as you push new commits.
-
----
-*This preview will be automatically cleaned up when the PR is merged or closed.*`;
+            const commentBody = [
+              '## \uD83D\uDE80 Preview Deployment',
+              '',
+              'Your preview deployment is ready!',
+              '',
+              `**Preview URL:** ${previewUrl}`,
+              '',
+              'Changes will be reflected in the preview as you push new commits.',
+              '',
+              '---',
+              '*This preview will be automatically cleaned up when the PR is merged or closed.*',
+            ].join('\n');
 
             if (botComment) {
               await github.rest.issues.updateComment({
