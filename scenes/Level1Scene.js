@@ -100,7 +100,6 @@ const WARBIRD_CLOAK_MAX_COUNT = 3;        // Number of times warbird cloaks duri
 const WARBIRD_CLOAK_HEALTH_FRACTION = 0.5; // Triggers at 50% of total health+shields
 const WARBIRD_INITIAL_DECLOAK_DELAY = 750; // Milliseconds after spawn before the warbird decloaks
 const WARBIRD_SPAWN_BOTTOM_MARGIN = 20;   // Pixels between bottom of warbird sprite and screen edge at spawn
-const WARBIRD_SPAWN_Y_FRACTION = 0.85;    // Y position as fraction of screen height for warbird chase movement
 
 // USS Sentinel constants for Level 5
 const SENTINEL_Y_FRACTION = 0.85; // Y position as fraction of screen height
@@ -3760,8 +3759,8 @@ class Level1Scene extends Phaser.Scene {
                 const dx = this.player.x - enemy.x;
                 enemy.body.setVelocityX(Math.abs(dx) < 10 ? 0 : Math.sign(dx) * speed);
                 enemy.body.setVelocityY(0);
-                // Lock Y using the same spawn fraction so the warbird stays fully visible on mobile
-                enemy.y = this.cameraHeight * WARBIRD_SPAWN_Y_FRACTION;
+                // Lock Y to the same position as spawn: bottom edge WARBIRD_SPAWN_BOTTOM_MARGIN above screen edge
+                enemy.y = this.cameraHeight - enemy.displayHeight / 2 - WARBIRD_SPAWN_BOTTOM_MARGIN;
                 break;
             }
         }
