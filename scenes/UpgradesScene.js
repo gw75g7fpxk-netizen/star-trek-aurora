@@ -52,30 +52,38 @@ class UpgradesScene extends Phaser.Scene {
         this.createUpgradeList(isMobile)
         
         // Reset button — anchored above the footer
+        // Reset button: pill-shaped LCARS button (no brackets)
         const resetButtonY = height - fH - (isMobile ? 52 : 58)
         const resetBtnW = isMobile ? 200 : 240
         const resetBtnH = isMobile ? 34 : 40
-        const resetBg = this.add.rectangle(width / 2, resetButtonY, resetBtnW, resetBtnH, 0x330800, 1)
-        resetBg.setStrokeStyle(2, 0xFF6600, 1)
-        resetBg.setInteractive({ useHandCursor: true })
-        const resetText = this.add.text(width / 2, resetButtonY, '[ RESET ALL UPGRADES ]', {
+        const resetBtnR = resetBtnH / 2
+        const drawResetPill = (gfx, color) => {
+            gfx.clear()
+            gfx.fillStyle(color, 1)
+            gfx.fillRoundedRect(width / 2 - resetBtnW / 2, resetButtonY - resetBtnH / 2, resetBtnW, resetBtnH, resetBtnR)
+        }
+        const resetBg = this.add.graphics()
+        drawResetPill(resetBg, 0xCC7766)
+        resetBg.setInteractive(
+            new Phaser.Geom.Rectangle(width / 2 - resetBtnW / 2, resetButtonY - resetBtnH / 2, resetBtnW, resetBtnH),
+            Phaser.Geom.Rectangle.Contains
+        )
+        const resetText = this.add.text(width / 2, resetButtonY, 'RESET ALL UPGRADES', {
             fontSize: isMobile ? '14px' : '16px',
-            color: '#FF6600',
+            color: '#000000',
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'
         }).setOrigin(0.5)
         resetBg.on('pointerdown', () => this.resetUpgrades())
         resetBg.on('pointerover', () => {
-            resetBg.setFillStyle(0x551100)
-            resetText.setColor('#FF9900')
+            drawResetPill(resetBg, 0xEE9988)
         })
         resetBg.on('pointerout', () => {
-            resetBg.setFillStyle(0x330800)
-            resetText.setColor('#FF6600')
+            drawResetPill(resetBg, 0xCC7766)
         })
         
         // Back button in the orange footer bar
-        const backButton = this.add.text(width / 2, height - fH / 2, '[ BACK TO MENU ]', {
+        const backButton = this.add.text(width / 2, height - fH / 2, 'BACK TO MENU', {
             fontSize: isMobile ? '14px' : '16px',
             color: '#000000',
             fontFamily: 'Courier New, monospace',

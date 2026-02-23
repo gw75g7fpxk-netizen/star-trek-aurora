@@ -328,37 +328,45 @@ class LevelSelectScene extends Phaser.Scene {
             })
         }
         
-        // Launch button styled as a LCARS rectangular button
+        // Launch button: pill-shaped LCARS button (no brackets)
         const btnW = isMobile ? panelWidth - leftPad * 2 : panelWidth - 40
         const btnH = isMobile ? 36 : 44
         const btnX = panelX + panelWidth / 2
         const btnY = panelY + panelHeight - (isMobile ? 46 : 58)
-        const btnLabel = isMobile ? '[ LAUNCH ]' : '[ LAUNCH MISSION ]'
+        const btnLabel = isMobile ? 'LAUNCH' : 'LAUNCH MISSION'
+        const btnR = btnH / 2
 
-        const btnBg = this.add.rectangle(btnX, btnY, btnW, btnH, 0x003322, 1)
-        btnBg.setStrokeStyle(2, 0x00AA55, 1)
-        btnBg.setInteractive({ useHandCursor: true })
+        const drawLaunchPill = (gfx, color) => {
+            gfx.clear()
+            gfx.fillStyle(color, 1)
+            gfx.fillRoundedRect(btnX - btnW / 2, btnY - btnH / 2, btnW, btnH, btnR)
+        }
+
+        const btnBg = this.add.graphics()
+        drawLaunchPill(btnBg, 0x9977BB)
+        btnBg.setInteractive(
+            new Phaser.Geom.Rectangle(btnX - btnW / 2, btnY - btnH / 2, btnW, btnH),
+            Phaser.Geom.Rectangle.Contains
+        )
 
         this.playButton = this.add.text(btnX, btnY, btnLabel, {
             fontSize: isMobile ? '16px' : '22px',
-            color: '#00FF88',
+            color: '#000000',
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'
         }).setOrigin(0.5)
 
         // Store the background so setLaunchButtonVisible() can control both together
         this.playButtonBg = btnBg
-        
+
         btnBg.on('pointerdown', () => {
             this.launchLevel()
         })
         btnBg.on('pointerover', () => {
-            btnBg.setFillStyle(0x005533)
-            this.playButton.setColor('#00FFCC')
+            drawLaunchPill(btnBg, 0xBB99DD)
         })
         btnBg.on('pointerout', () => {
-            btnBg.setFillStyle(0x003322)
-            this.playButton.setColor('#00FF88')
+            drawLaunchPill(btnBg, 0x9977BB)
         })
     }
 
@@ -378,7 +386,7 @@ class LevelSelectScene extends Phaser.Scene {
         const backX = width / 2
         const backY = height - fH / 2
         
-        const backButton = this.add.text(backX, backY, '[ BACK TO MENU ]', {
+        const backButton = this.add.text(backX, backY, 'BACK TO MENU', {
             fontSize: backSize,
             color: '#000000',
             fontFamily: 'Courier New, monospace',

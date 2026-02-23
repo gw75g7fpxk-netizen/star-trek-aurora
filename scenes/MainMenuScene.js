@@ -56,13 +56,13 @@ class MainMenuScene extends Phaser.Scene {
         const btnFontSize = isMobile ? '18px' : '26px'
         const infoFontSize = isMobile ? '12px' : '14px'
 
-        // Mission Select button
+        // Mission Select button (purple pill)
         const msnY = btnAreaY + btnH / 2
         this.createLCARSButton({
             x: contentX, y: msnY, w: btnW, h: btnH,
-            label: '[ MISSION SELECT ]', fontSize: btnFontSize,
-            bgColor: 0x003322, strokeColor: 0x00AA55, textColor: '#00FF88',
-            hoverBgColor: 0x005533, hoverTextColor: '#00FFCC',
+            label: 'MISSION SELECT', fontSize: btnFontSize,
+            bgColor: 0x9977BB, textColor: '#000000',
+            hoverBgColor: 0xBB99DD, hoverTextColor: '#000000',
             callback: () => this.scene.start('LevelSelectScene')
         })
         this.add.text(contentX, msnY + btnH / 2 + (isMobile ? 10 : 13),
@@ -72,13 +72,13 @@ class MainMenuScene extends Phaser.Scene {
                 fontFamily: 'Courier New, monospace'
             }).setOrigin(0.5)
 
-        // Ship Upgrades button
+        // Ship Upgrades button (orange pill)
         const upgY = msnY + btnGap
         this.createLCARSButton({
             x: contentX, y: upgY, w: btnW, h: btnH,
-            label: '[ SHIP UPGRADES ]', fontSize: btnFontSize,
-            bgColor: 0x332200, strokeColor: 0xFF9900, textColor: '#FF9900',
-            hoverBgColor: 0x553300, hoverTextColor: '#FFCC44',
+            label: 'SHIP UPGRADES', fontSize: btnFontSize,
+            bgColor: 0xFF9900, textColor: '#000000',
+            hoverBgColor: 0xFFCC44, hoverTextColor: '#000000',
             callback: () => this.scene.start('UpgradesScene')
         })
         this.add.text(contentX, upgY + btnH / 2 + (isMobile ? 10 : 13),
@@ -109,89 +109,103 @@ class MainMenuScene extends Phaser.Scene {
         })
     }
 
-    // Draws the LCARS frame: orange header (right), peach sidebar (left),
-    // concave quarter-circle inner corner, and orange footer.
+    // Draws the LCARS frame:
+    //  - Purple/lavender top-left block (header height, rounded bottom-right corner)
+    //  - Orange header bar (right of purple block)
+    //  - Salmon elbow connector + concave quarter-circle arc
+    //  - Salmon sidebar blocks with pill-right (rounded-right) edges and gaps
+    //  - Orange footer
     createLCARSFrame(width, height, isMobile) {
         const hH = isMobile ? 44 : 62     // header height
-        const sW = isMobile ? 98 : 128    // sidebar width
-        const cR = isMobile ? 24 : 32     // inner corner radius
+        const sW = isMobile ? 110 : 150   // sidebar width
+        const cR = isMobile ? 28 : 38     // elbow corner radius
         const fH = isMobile ? 28 : 36     // footer height
 
-        const HEADER_COLOR = 0xFF9900     // orange
-        const SIDEBAR_COLOR = 0xFF9966    // peach / salmon
+        const PURPLE = 0x9977BB   // periwinkle/lavender (header block + accent)
+        const SALMON  = 0xCC7766  // terracotta (sidebar blocks)
+        const SALMON2 = 0xBB5544  // darker terracotta (alternate blocks)
+        const ORANGE  = 0xFF9900  // orange/gold (header bar + footer)
 
         const gfx = this.add.graphics()
 
-        // Orange header bar (right portion, beside sidebar)
-        gfx.fillStyle(HEADER_COLOR, 1)
+        // --- Purple/lavender top-left block (rounded bottom-right corner only) ---
+        gfx.fillStyle(PURPLE, 1)
+        gfx.fillRoundedRect(0, 0, sW, hH, { tl: 0, tr: 0, bl: 0, br: cR })
+
+        // --- Orange header bar (right of purple block) ---
+        gfx.fillStyle(ORANGE, 1)
         gfx.fillRect(sW, 0, width - sW, hH)
 
-        // Peach corner piece (top-left, same height as header)
-        gfx.fillStyle(SIDEBAR_COLOR, 1)
-        gfx.fillRect(0, 0, sW, hH)
-
-        // Peach corner extension strip (just below header, extends cR right for arc)
+        // --- Elbow connector: salmon strip spanning sidebar+cR so the arc sits flush ---
+        gfx.fillStyle(SALMON, 1)
         gfx.fillRect(0, hH, sW + cR, cR)
 
-        // Peach main sidebar (below corner strip)
-        gfx.fillRect(0, hH + cR, sW, height - hH - cR - fH)
-
         // Black concave quarter-circle arc at the inner corner.
-        // Centered at (sW, hH): the pie slice from angle 0 (right) to π/2 (down)
-        // removes the frame color that would otherwise form a sharp 90° inner corner,
-        // producing the characteristic LCARS concave curve.
+        // Centered at (sW, hH): pie slice 0→π/2 removes the sharp corner,
+        // producing the characteristic LCARS concave elbow curve.
         gfx.fillStyle(0x000000, 1)
         gfx.slice(sW, hH, cR, 0, Math.PI / 2, false)
         gfx.fillPath()
 
-        // Orange footer bar (full width)
-        gfx.fillStyle(HEADER_COLOR, 1)
+        // --- Orange footer bar (full width) ---
+        gfx.fillStyle(ORANGE, 1)
         gfx.fillRect(0, height - fH, width, fH)
 
-        // Thin accent lines below the header (LCARS horizontal dividers)
-        gfx.fillStyle(HEADER_COLOR, 0.4)
+        // --- Thin accent lines below the header ---
+        gfx.fillStyle(ORANGE, 0.4)
         gfx.fillRect(sW + cR + 4, hH + 4, width - sW - cR - 8, 2)
         gfx.fillStyle(0x9999CC, 0.35)
         gfx.fillRect(sW + cR + 4, hH + 9, width - sW - cR - 8, 1)
 
-        // --- Sidebar data blocks ---
-        const blockDefs = [
-            { label: 'STARDATE', value: '47634.4', color: 0xFF6655 },
-            { label: 'USS AURORA', value: 'NCC-7100', color: 0x9999CC },
-            { label: 'SHIELDS', value: '100%', color: 0xFFAA44 },
-            { label: 'WARP CORE', value: 'NOMINAL', color: 0x66AACC },
-            { label: 'TACTICAL', value: 'READY', color: 0xAA66AA },
-        ]
-        const bW = sW - 14
-        const bH = isMobile ? 30 : 36
-        const bGap = isMobile ? 40 : 48
-        let bY = hH + cR + (isMobile ? 12 : 16)
+        // --- Sidebar blocks: pill-right shape (rounded right edge), gap between each ---
+        // This matches the LCARS reference: discrete labelled blocks that span the full
+        // sidebar width with a half-pill on the right and flush on the left.
+        const blockH   = isMobile ? 32 : 38
+        const blockGap = isMobile ? 4 : 5
+        const bR = Math.min(blockH / 2, isMobile ? 12 : 16)  // right-edge radius
 
-        blockDefs.forEach(block => {
-            if (bY + bH < height - fH - 12) {
+        const sidebarBlocks = [
+            { label: 'USS AURORA', sub: 'NCC-7100', color: PURPLE   },
+            { label: 'STARDATE',   sub: '47634.4',  color: SALMON2  },
+            { label: 'SHIELDS',    sub: '100%',     color: SALMON   },
+            { label: 'WARP CORE',  sub: 'NOMINAL',  color: SALMON2  },
+            { label: 'TACTICAL',   sub: 'READY',    color: ORANGE   },
+            { label: 'STATUS',     sub: 'GREEN',    color: SALMON   },
+        ]
+
+        let bY = hH + cR + blockGap
+        sidebarBlocks.forEach(block => {
+            if (bY + blockH <= height - fH - blockGap) {
                 gfx.fillStyle(block.color, 1)
-                gfx.fillRoundedRect(7, bY, bW, bH, 5)
-                this.add.text(7 + bW / 2, bY + bH / 2 - (isMobile ? 5 : 6), block.label, {
+                gfx.fillRoundedRect(0, bY, sW, blockH, { tl: 0, tr: bR, bl: 0, br: bR })
+                this.add.text(sW / 2, bY + blockH / 2 - (isMobile ? 5 : 6), block.label, {
                     fontSize: isMobile ? '8px' : '9px',
                     color: '#000000',
                     fontFamily: 'Courier New, monospace',
                     fontStyle: 'bold'
                 }).setOrigin(0.5)
-                this.add.text(7 + bW / 2, bY + bH / 2 + (isMobile ? 5 : 7), block.value, {
+                this.add.text(sW / 2, bY + blockH / 2 + (isMobile ? 5 : 7), block.sub, {
                     fontSize: isMobile ? '9px' : '10px',
                     color: '#000000',
                     fontFamily: 'Courier New, monospace'
                 }).setOrigin(0.5)
-                bY += bGap
+                bY += blockH + blockGap
             }
         })
 
-        // Header text labels (on the orange bar)
-        this.add.text(sW + cR + 10, hH / 2, 'LCARS INTERFACE', {
-            fontSize: isMobile ? '12px' : '16px',
+        // Label in the purple header block
+        this.add.text(sW / 2, hH / 2, 'LCARS', {
+            fontSize: isMobile ? '14px' : '18px',
             color: '#000000',
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'
+        }).setOrigin(0.5)
+
+        // Header info text on the orange bar
+        this.add.text(sW + 16, hH / 2, 'STARFLEET ACCESS 4427', {
+            fontSize: isMobile ? '11px' : '14px',
+            color: '#000000',
+            fontFamily: 'Courier New, monospace'
         }).setOrigin(0, 0.5)
 
         this.add.text(width - 10, hH / 2, 'USS AURORA', {
@@ -207,13 +221,24 @@ class MainMenuScene extends Phaser.Scene {
         return { hH, sW, cR, fH, contentX, contentW }
     }
 
-    // Creates a rectangular LCARS-style button with hover effects.
-    // opts: { x, y, w, h, label, fontSize, bgColor, strokeColor, textColor, hoverBgColor, hoverTextColor, callback }
+    // Creates a pill-shaped (fully rounded) LCARS button with hover effects.
+    // opts: { x, y, w, h, label, fontSize, bgColor, textColor, hoverBgColor, hoverTextColor, callback }
     createLCARSButton(opts) {
-        const { x, y, w, h, label, fontSize, bgColor, strokeColor, textColor, hoverBgColor, hoverTextColor, callback } = opts
-        const bg = this.add.rectangle(x, y, w, h, bgColor, 1)
-        bg.setStrokeStyle(2, strokeColor, 1)
-        bg.setInteractive({ useHandCursor: true })
+        const { x, y, w, h, label, fontSize, bgColor, textColor, hoverBgColor, hoverTextColor, callback } = opts
+        const r = h / 2  // full pill radius
+
+        const drawPill = (gfx, color) => {
+            gfx.clear()
+            gfx.fillStyle(color, 1)
+            gfx.fillRoundedRect(x - w / 2, y - h / 2, w, h, r)
+        }
+
+        const gfx = this.add.graphics()
+        drawPill(gfx, bgColor)
+        gfx.setInteractive(
+            new Phaser.Geom.Rectangle(x - w / 2, y - h / 2, w, h),
+            Phaser.Geom.Rectangle.Contains
+        )
 
         const text = this.add.text(x, y, label, {
             fontSize,
@@ -222,16 +247,16 @@ class MainMenuScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5)
 
-        bg.on('pointerdown', callback)
-        bg.on('pointerover', () => {
-            bg.setFillStyle(hoverBgColor)
+        gfx.on('pointerdown', callback)
+        gfx.on('pointerover', () => {
+            drawPill(gfx, hoverBgColor)
             text.setColor(hoverTextColor)
         })
-        bg.on('pointerout', () => {
-            bg.setFillStyle(bgColor)
+        gfx.on('pointerout', () => {
+            drawPill(gfx, bgColor)
             text.setColor(textColor)
         })
-        return { bg, text }
+        return { gfx, text }
     }
 
     createStarfield() {
