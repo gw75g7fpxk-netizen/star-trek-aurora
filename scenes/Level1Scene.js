@@ -3759,8 +3759,8 @@ class Level1Scene extends Phaser.Scene {
                 const dx = this.player.x - enemy.x;
                 enemy.body.setVelocityX(Math.abs(dx) < 10 ? 0 : Math.sign(dx) * speed);
                 enemy.body.setVelocityY(0);
-                // Lock Y using the same spawn fraction so the warbird stays fully visible on mobile
-                enemy.y = this.cameraHeight * WARBIRD_SPAWN_Y_FRACTION;
+                // Lock Y to the same position as spawn: bottom edge WARBIRD_SPAWN_BOTTOM_MARGIN above screen edge
+                enemy.y = this.cameraHeight - enemy.displayHeight / 2 - WARBIRD_SPAWN_BOTTOM_MARGIN;
                 break;
             }
         }
