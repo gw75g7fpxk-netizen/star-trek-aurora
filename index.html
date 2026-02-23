@@ -16,7 +16,6 @@
         html, body {
             width: 100%;
             height: 100%;
-            height: 100dvh;
             overflow: hidden;
             background-color: #000;
             position: fixed;
@@ -31,25 +30,10 @@
             padding: 0;
             width: 100vw !important;
             height: 100vh !important;
-            height: var(--vh, 100vh) !important;
-            height: 100dvh !important;
         }
     </style>
 </head>
 <body>
-    <script>
-        // Fix for mobile browsers where 100vh includes browser chrome (address bar, nav bar).
-        // Sets --vh custom property to the actual visible inner height so the game fills
-        // only the usable viewport area in both browser and home-screen (standalone) modes.
-        function setVh() {
-            document.documentElement.style.setProperty('--vh', window.innerHeight + 'px');
-        }
-        setVh();
-        window.addEventListener('resize', setVh);
-        window.addEventListener('orientationchange', function() {
-            setTimeout(setVh, 100);
-        });
-    </script>
     <!-- Phaser 3.80.1 (local) -->
     <script src="phaser.min.js"></script>
     

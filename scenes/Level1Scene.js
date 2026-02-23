@@ -128,6 +128,9 @@ const SENTINEL_BEAM_WIDTH = 4;              // Beam line width in pixels (matche
 const SENTINEL_BEAM_COLOR = 0xFFFF00;        // Yellow, matches bullet color
 const SENTINEL_BEAM_ORIGIN_OFFSET = 20;      // Y offset above Sentinel for beam origin (matches torpedo/bullet launch offset)
 
+// Extra padding (px) above browser chrome when computing safe area for touch controls
+const CHROME_PADDING_OFFSET = 60;
+
 class Level1Scene extends Phaser.Scene {
     constructor() {
         super({ key: 'Level1Scene' });
@@ -244,6 +247,12 @@ class Level1Scene extends Phaser.Scene {
         // Listen for resize events
         this.scale.on('resize', this.handleResize, this);
         
+        // Also listen for Visual Viewport changes (iOS Safari browser chrome show/hide)
+        if (window.visualViewport) {
+            this._onVisualViewportResize = () => this.handleResize({ width: this.cameraWidth, height: this.cameraHeight });
+            window.visualViewport.addEventListener('resize', this._onVisualViewportResize);
+        }
+        
         // Create scrolling background
         this.createScrollingBackground();
         
@@ -337,6 +346,9 @@ class Level1Scene extends Phaser.Scene {
             this.pauseButton.off('pointerover');
             this.pauseButton.off('pointerout');
         }
+        if (window.visualViewport && this._onVisualViewportResize) {
+            window.visualViewport.removeEventListener('resize', this._onVisualViewportResize);
+        }
     }
     
     updateCameraDimensions() {
@@ -347,7 +359,19 @@ class Level1Scene extends Phaser.Scene {
     }
     
     getSafeAreaOffset() {
-        // Return the safe area offset for mobile devices with browser chrome
+        // Dynamically compute bottom safe area using the Visual Viewport API so
+        // touch controls stay above browser chrome (URL bar / nav bar) on iOS Safari.
+        // visualViewport.height = actual visible area; window.innerHeight = full layout
+        // viewport (may include area behind browser chrome on iOS).
+        if (window.visualViewport) {
+            const bottomChrome = Math.max(
+                0,
+                window.innerHeight
+                    - window.visualViewport.height
+                    - (window.visualViewport.offsetTop || 0)
+            );
+            return Math.max(bottomChrome + CHROME_PADDING_OFFSET, this.safeAreaOffset);
+        }
         return this.safeAreaOffset;
     }
     
