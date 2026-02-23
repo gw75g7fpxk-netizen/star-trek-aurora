@@ -2588,8 +2588,11 @@ class Level1Scene extends Phaser.Scene {
             
             // Romulan warbird (Level 7): spawn cloaked at the max vertical position (bottom of screen)
             if (enemyType === 'romulanWarbird') {
-                // Position warbird so its bottom edge is WARBIRD_SPAWN_BOTTOM_MARGIN pixels above the screen bottom
-                enemy.y = this.cameraHeight - enemy.displayHeight - WARBIRD_SPAWN_BOTTOM_MARGIN;
+                // Position warbird so its bottom edge is WARBIRD_SPAWN_BOTTOM_MARGIN pixels above the
+                // effective game-world bottom (physics world bounds), which already accounts for the
+                // mobile browser safe area / iOS Safari browser chrome.
+                // Uses displayHeight/2 because Phaser's default origin is (0.5, 0.5) so y = centre.
+                enemy.y = this.physics.world.bounds.bottom - enemy.displayHeight / 2 - WARBIRD_SPAWN_BOTTOM_MARGIN;
                 // Start fully cloaked (invisible, no collision)
                 enemy.setAlpha(0);
                 enemy.isCloaked = true;
@@ -3829,8 +3832,9 @@ class Level1Scene extends Phaser.Scene {
                 const dx = this.player.x - enemy.x;
                 enemy.body.setVelocityX(Math.abs(dx) < 10 ? 0 : Math.sign(dx) * speed);
                 enemy.body.setVelocityY(0);
-                // Lock Y to the same position as spawn: bottom edge WARBIRD_SPAWN_BOTTOM_MARGIN above screen edge
-                enemy.y = this.cameraHeight - enemy.displayHeight - WARBIRD_SPAWN_BOTTOM_MARGIN;
+                // Lock Y to the same position as spawn: bottom edge WARBIRD_SPAWN_BOTTOM_MARGIN above the
+                // effective game-world bottom (accounts for mobile safe area / iOS Safari browser chrome).
+                enemy.y = this.physics.world.bounds.bottom - enemy.displayHeight / 2 - WARBIRD_SPAWN_BOTTOM_MARGIN;
                 break;
             }
         }
