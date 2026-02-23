@@ -91,39 +91,42 @@ class LevelSelectScene extends Phaser.Scene {
         }
     }
 
-    // Draws a slim LCARS-style header band and footer bar.
+    // Draws a LCARS-style header band matching the reference:
+    //  - Lavender rectangle on the left (square corners, no rounding)
+    //  - Orange header bar to the right, same height
+    //  - Thin accent line below
+    //  - Orange footer bar
     createLCARSHeader(width, height, hH, fH, isMobile) {
+        const lavW = isMobile ? 70 : 100   // width of the lavender left block
         const gfx = this.add.graphics()
 
-        // Orange header band (full width)
+        // Orange header band (full width, drawn first)
         gfx.fillStyle(0xFF9900, 1)
         gfx.fillRect(0, 0, width, hH)
 
-        // Peach accent stripe at the left of the header
-        gfx.fillStyle(0xFF9966, 1)
-        gfx.fillRect(0, 0, isMobile ? 60 : 80, hH)
+        // Lavender/purple left block — plain rectangle, square corners (matches reference)
+        gfx.fillStyle(0x9988CC, 1)
+        gfx.fillRect(0, 0, lavW, hH)
 
-        // System label on the left accent
-        this.add.text(isMobile ? 30 : 40, hH / 2, 'LCARS', {
-            fontSize: isMobile ? '10px' : '12px',
+        // System label left-aligned inside the lavender block
+        this.add.text(8, hH / 2, 'LCARS', {
+            fontSize: isMobile ? '11px' : '14px',
             color: '#000000',
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'
-        }).setOrigin(0.5)
+        }).setOrigin(0, 0.5)
 
-        // Thin horizontal accent lines below the header (into content area)
-        gfx.fillStyle(0xFF9900, 0.5)
-        gfx.fillRect(0, hH + 3, width, 2)
-        gfx.fillStyle(0x9999CC, 0.35)
-        gfx.fillRect(0, hH + 8, width, 1)
+        // Thin salmon accent line just below the header
+        gfx.fillStyle(0xCC7755, 0.6)
+        gfx.fillRect(lavW, hH + 3, width - lavW, 3)
 
         // Orange footer bar
         gfx.fillStyle(0xFF9900, 1)
         gfx.fillRect(0, height - fH, width, fH)
 
-        // Right-side header data tag
+        // Right-side header label (large, like reference "LCARS ACCESS 441x")
         this.add.text(width - 10, hH / 2, 'USS AURORA', {
-            fontSize: isMobile ? '10px' : '13px',
+            fontSize: isMobile ? '14px' : '20px',
             color: '#000000',
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'

@@ -109,40 +109,40 @@ class MainMenuScene extends Phaser.Scene {
         })
     }
 
-    // Draws the LCARS frame:
-    //  - Purple/lavender top-left block (header height, rounded bottom-right corner)
-    //  - Orange header bar (right of purple block)
-    //  - Salmon elbow connector + concave quarter-circle arc
-    //  - Salmon sidebar blocks with pill-right (rounded-right) edges and gaps
+    // Draws the LCARS frame matching the reference image:
+    //  - Lavender/purple top-left block — plain rectangle, no rounded corners
+    //  - Orange header bar to its right, same height
+    //  - Salmon elbow connector + large concave quarter-circle arc
+    //  - Salmon sidebar blocks — plain flat rectangles with thin black gaps
     //  - Orange footer
     createLCARSFrame(width, height, isMobile) {
-        const hH = isMobile ? 44 : 62     // header height
-        const sW = isMobile ? 110 : 150   // sidebar width
-        const cR = isMobile ? 28 : 38     // elbow corner radius
+        const hH = isMobile ? 52 : 78     // header height (taller, matching reference)
+        const sW = isMobile ? 110 : 155   // sidebar width
+        const cR = isMobile ? 36 : 56     // elbow radius — large, prominent like reference
         const fH = isMobile ? 28 : 36     // footer height
 
-        const PURPLE = 0x9977BB   // periwinkle/lavender (header block + accent)
-        const SALMON  = 0xCC7766  // terracotta (sidebar blocks)
-        const SALMON2 = 0xBB5544  // darker terracotta (alternate blocks)
-        const ORANGE  = 0xFF9900  // orange/gold (header bar + footer)
+        const PURPLE  = 0x9988CC  // periwinkle/lavender — matches reference top-left block
+        const SALMON  = 0xCC7755  // main salmon/terracotta sidebar colour
+        const SALMON2 = 0xBB5533  // darker terracotta alternate
+        const ORANGE  = 0xFF9900  // orange/gold header bar + footer
 
         const gfx = this.add.graphics()
 
-        // --- Purple/lavender top-left block (rounded bottom-right corner only) ---
+        // --- Lavender top-left block: plain rectangle, square corners ---
         gfx.fillStyle(PURPLE, 1)
-        gfx.fillRoundedRect(0, 0, sW, hH, { tl: 0, tr: 0, bl: 0, br: cR })
+        gfx.fillRect(0, 0, sW, hH)
 
-        // --- Orange header bar (right of purple block) ---
+        // --- Orange header bar (right of lavender block), same height ---
         gfx.fillStyle(ORANGE, 1)
         gfx.fillRect(sW, 0, width - sW, hH)
 
-        // --- Elbow connector: salmon strip spanning sidebar+cR so the arc sits flush ---
+        // --- Salmon elbow connector: spans sidebar + arc radius width, arc radius tall ---
         gfx.fillStyle(SALMON, 1)
         gfx.fillRect(0, hH, sW + cR, cR)
 
         // Black concave quarter-circle arc at the inner corner.
-        // Centered at (sW, hH): pie slice 0→π/2 removes the sharp corner,
-        // producing the characteristic LCARS concave elbow curve.
+        // Centered at (sW, hH): pie slice 0→π/2 cuts away the sharp corner,
+        // producing the LCARS characteristic large concave elbow curve.
         gfx.fillStyle(0x000000, 1)
         gfx.slice(sW, hH, cR, 0, Math.PI / 2, false)
         gfx.fillPath()
@@ -151,65 +151,51 @@ class MainMenuScene extends Phaser.Scene {
         gfx.fillStyle(ORANGE, 1)
         gfx.fillRect(0, height - fH, width, fH)
 
-        // --- Thin accent lines below the header ---
-        gfx.fillStyle(ORANGE, 0.4)
-        gfx.fillRect(sW + cR + 4, hH + 4, width - sW - cR - 8, 2)
-        gfx.fillStyle(0x9999CC, 0.35)
-        gfx.fillRect(sW + cR + 4, hH + 9, width - sW - cR - 8, 1)
+        // --- Thin accent line below the header (matches reference's thin divider strip) ---
+        gfx.fillStyle(SALMON, 0.5)
+        gfx.fillRect(sW + cR + 2, hH + 4, width - sW - cR - 4, 3)
 
-        // --- Sidebar blocks: pill-right shape (rounded right edge), gap between each ---
-        // This matches the LCARS reference: discrete labelled blocks that span the full
-        // sidebar width with a half-pill on the right and flush on the left.
-        const blockH   = isMobile ? 32 : 38
-        const blockGap = isMobile ? 4 : 5
-        const bR = Math.min(blockH / 2, isMobile ? 12 : 16)  // right-edge radius
+        // --- Sidebar blocks: plain flat rectangles, full sidebar width, thin black gaps ---
+        // Reference shows blocks that are flush left AND right — no rounded corners.
+        // Labels use LCARS-style identifier codes matching the reference image aesthetic.
+        const blockH   = isMobile ? 36 : 46
+        const blockGap = isMobile ? 3 : 4
 
         const sidebarBlocks = [
-            { label: 'USS AURORA', sub: 'NCC-7100', color: PURPLE   },
-            { label: 'STARDATE',   sub: '47634.4',  color: SALMON2  },
-            { label: 'SHIELDS',    sub: '100%',     color: SALMON   },
-            { label: 'WARP CORE',  sub: 'NOMINAL',  color: SALMON2  },
-            { label: 'TACTICAL',   sub: 'READY',    color: ORANGE   },
-            { label: 'STATUS',     sub: 'GREEN',    color: SALMON   },
+            { label: 'LCARS 40274', color: PURPLE },
+            { label: '02-654598',   color: PURPLE },
+            { label: '03-975683',   color: SALMON },
+            { label: '04-765466',   color: SALMON },
+            { label: '05-224353',   color: ORANGE },
+            { label: '06-576565',   color: SALMON },
         ]
 
         let bY = hH + cR + blockGap
         sidebarBlocks.forEach(block => {
             if (bY + blockH <= height - fH - blockGap) {
                 gfx.fillStyle(block.color, 1)
-                gfx.fillRoundedRect(0, bY, sW, blockH, { tl: 0, tr: bR, bl: 0, br: bR })
-                this.add.text(sW / 2, bY + blockH / 2 - (isMobile ? 5 : 6), block.label, {
-                    fontSize: isMobile ? '8px' : '9px',
+                gfx.fillRect(0, bY, sW, blockH)
+                this.add.text(sW / 2, bY + blockH / 2, block.label, {
+                    fontSize: isMobile ? '9px' : '11px',
                     color: '#000000',
                     fontFamily: 'Courier New, monospace',
                     fontStyle: 'bold'
-                }).setOrigin(0.5)
-                this.add.text(sW / 2, bY + blockH / 2 + (isMobile ? 5 : 7), block.sub, {
-                    fontSize: isMobile ? '9px' : '10px',
-                    color: '#000000',
-                    fontFamily: 'Courier New, monospace'
                 }).setOrigin(0.5)
                 bY += blockH + blockGap
             }
         })
 
-        // Label in the purple header block
-        this.add.text(sW / 2, hH / 2, 'LCARS', {
-            fontSize: isMobile ? '14px' : '18px',
+        // Label in the lavender header block (left-aligned like reference "LCARS 40274" label)
+        this.add.text(8, hH / 2, 'LCARS', {
+            fontSize: isMobile ? '13px' : '17px',
             color: '#000000',
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'
-        }).setOrigin(0.5)
-
-        // Header info text on the orange bar
-        this.add.text(sW + 16, hH / 2, 'STARFLEET ACCESS 4427', {
-            fontSize: isMobile ? '11px' : '14px',
-            color: '#000000',
-            fontFamily: 'Courier New, monospace'
         }).setOrigin(0, 0.5)
 
-        this.add.text(width - 10, hH / 2, 'USS AURORA', {
-            fontSize: isMobile ? '11px' : '15px',
+        // Header info text on the orange bar (large, right-aligned like "LCARS ACCESS 441x")
+        this.add.text(width - 10, hH / 2, 'LCARS ACCESS 4427', {
+            fontSize: isMobile ? '18px' : '28px',
             color: '#000000',
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'
