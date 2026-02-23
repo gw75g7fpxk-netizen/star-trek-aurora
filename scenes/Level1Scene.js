@@ -132,7 +132,8 @@ const SENTINEL_BEAM_ORIGIN_OFFSET = 20;      // Y offset above Sentinel for beam
 const CHROME_PADDING_OFFSET = 60;
 // Safe area offset (px) applied in mobile browser mode (non-standalone) to clear
 // the Safari/Chrome bottom toolbar (~44px) + home indicator (~34px) + button radius (~50px)
-const MOBILE_BROWSER_CHROME_SAFE_AREA = 180;
+// + scale mismatch between 100vh and window.innerHeight on iOS Safari (measured empirically)
+const MOBILE_BROWSER_CHROME_SAFE_AREA = 300;
 
 class Level1Scene extends Phaser.Scene {
     constructor() {
