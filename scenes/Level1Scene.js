@@ -99,7 +99,9 @@ const WARBIRD_CLOAK_FADE_DURATION = 2000; // Milliseconds for fade-in/out during
 const WARBIRD_CLOAK_MAX_COUNT = 3;        // Number of times warbird cloaks during the battle
 const WARBIRD_CLOAK_HEALTH_FRACTION = 0.5; // Triggers at 50% of total health+shields
 const WARBIRD_INITIAL_DECLOAK_DELAY = 750; // Milliseconds after spawn before the warbird decloaks
-const WARBIRD_SPAWN_BOTTOM_MARGIN = 20;   // Pixels between bottom of warbird sprite and screen edge at spawn
+const WARBIRD_SPAWN_BOTTOM_MARGIN = 20;   // Pixels between bottom of warbird sprite and visible screen edge at spawn
+const WARBIRD_VIEWPORT_SAFE_PX = 90;     // Minimum px clearance from canvas bottom on mobile devices:
+                                         //   iOS Safari toolbar (~44px) + home indicator (~34px) + margin
 
 // USS Sentinel constants for Level 5
 const SENTINEL_Y_FRACTION = 0.85; // Y position as fraction of screen height
@@ -404,6 +406,22 @@ class Level1Scene extends Phaser.Scene {
             }
         }
         return this.safeAreaOffset;
+    }
+
+    getWarbirdY(enemy) {
+        // Compute the warbird centre Y so that its bottom edge sits WARBIRD_SPAWN_BOTTOM_MARGIN
+        // pixels above the VISIBLE bottom of the canvas.
+        // On mobile the canvas (100vh) may extend behind the iOS Safari toolbar.
+        // window.visualViewport.height gives the actually-visible height when available;
+        // WARBIRD_VIEWPORT_SAFE_PX (90px) is the fallback for the known iOS quirk where
+        // visualViewport.height == cameraHeight yet the toolbar still overlays content.
+        const bottomChrome = window.visualViewport
+            ? Math.max(0, this.cameraHeight - window.visualViewport.height)
+            : 0;
+        const mobileClearance = this.isMobileDevice
+            ? Math.max(bottomChrome, WARBIRD_VIEWPORT_SAFE_PX)
+            : 0;
+        return this.cameraHeight - mobileClearance - enemy.displayHeight / 2 - WARBIRD_SPAWN_BOTTOM_MARGIN;
     }
     
     handleResize(gameSize) {
@@ -2588,8 +2606,9 @@ class Level1Scene extends Phaser.Scene {
             
             // Romulan warbird (Level 7): spawn cloaked at the max vertical position (bottom of screen)
             if (enemyType === 'romulanWarbird') {
-                // Position warbird so its bottom edge is WARBIRD_SPAWN_BOTTOM_MARGIN pixels above the screen bottom
-                enemy.y = this.cameraHeight - enemy.displayHeight - WARBIRD_SPAWN_BOTTOM_MARGIN;
+                // Position warbird so its bottom edge is WARBIRD_SPAWN_BOTTOM_MARGIN pixels above
+                // the visible canvas bottom (see getWarbirdY for the full rationale).
+                enemy.y = this.getWarbirdY(enemy);
                 // Start fully cloaked (invisible, no collision)
                 enemy.setAlpha(0);
                 enemy.isCloaked = true;
@@ -3829,8 +3848,9 @@ class Level1Scene extends Phaser.Scene {
                 const dx = this.player.x - enemy.x;
                 enemy.body.setVelocityX(Math.abs(dx) < 10 ? 0 : Math.sign(dx) * speed);
                 enemy.body.setVelocityY(0);
-                // Lock Y to the same position as spawn: bottom edge WARBIRD_SPAWN_BOTTOM_MARGIN above screen edge
-                enemy.y = this.cameraHeight - enemy.displayHeight - WARBIRD_SPAWN_BOTTOM_MARGIN;
+                // Lock Y to the visible-area-relative position each frame so the warbird
+                // tracks any visualViewport changes (e.g. toolbar showing/hiding on iOS Safari).
+                enemy.y = this.getWarbirdY(enemy);
                 break;
             }
         }
