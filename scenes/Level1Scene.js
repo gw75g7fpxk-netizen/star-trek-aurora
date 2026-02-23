@@ -128,6 +128,16 @@ const SENTINEL_BEAM_WIDTH = 4;              // Beam line width in pixels (matche
 const SENTINEL_BEAM_COLOR = 0xFFFF00;        // Yellow, matches bullet color
 const SENTINEL_BEAM_ORIGIN_OFFSET = 20;      // Y offset above Sentinel for beam origin (matches torpedo/bullet launch offset)
 
+// Extra padding (px) above browser chrome when computing safe area for touch controls
+const CHROME_PADDING_OFFSET = 60;
+// Safe area offset (px) applied in mobile browser mode (non-standalone) to clear
+// the Safari/Chrome bottom toolbar (~44px) + home indicator (~34px) + button radius (~50px)
+// + scale mismatch between 100vh and window.innerHeight on iOS Safari (measured empirically)
+const MOBILE_BROWSER_CHROME_SAFE_AREA = 300;
+// How far below the button centre row the physics world bottom is allowed to extend on mobile.
+// The FIRE button has radius 50px; adding 10px margin keeps the ship above the button top edge.
+const MOBILE_BOUNDS_BUFFER = 60;
+
 class Level1Scene extends Phaser.Scene {
     constructor() {
         super({ key: 'Level1Scene' });
@@ -241,8 +251,17 @@ class Level1Scene extends Phaser.Scene {
         // Store camera dimensions for responsive layout
         this.updateCameraDimensions();
         
+        // Detect mobile device early so getSafeAreaOffset() works correctly in createPlayer()
+        this.isMobileDevice = this.detectMobileDevice();
+        
         // Listen for resize events
         this.scale.on('resize', this.handleResize, this);
+        
+        // Also listen for Visual Viewport changes (iOS Safari browser chrome show/hide)
+        if (window.visualViewport) {
+            this._onVisualViewportResize = () => this.handleResize({ width: this.cameraWidth, height: this.cameraHeight });
+            window.visualViewport.addEventListener('resize', this._onVisualViewportResize);
+        }
         
         // Create scrolling background
         this.createScrollingBackground();
@@ -252,6 +271,14 @@ class Level1Scene extends Phaser.Scene {
         
         // Setup controls
         this.setupControls();
+        
+        // On mobile, constrain physics world bottom to the visible area above touch controls
+        // so the player ship cannot drift into the browser-chrome-covered or button zone.
+        // On desktop (no mobile controls) leave the default full-height world bounds.
+        if (this.isMobileDevice) {
+            const safeAreaOffset = this.getSafeAreaOffset();
+            this.physics.world.setBounds(0, 0, this.cameraWidth, this.cameraHeight - safeAreaOffset + MOBILE_BOUNDS_BUFFER);
+        }
         
         // Create HUD
         this.createHUD();
@@ -337,6 +364,9 @@ class Level1Scene extends Phaser.Scene {
             this.pauseButton.off('pointerover');
             this.pauseButton.off('pointerout');
         }
+        if (window.visualViewport && this._onVisualViewportResize) {
+            window.visualViewport.removeEventListener('resize', this._onVisualViewportResize);
+        }
     }
     
     updateCameraDimensions() {
@@ -347,7 +377,32 @@ class Level1Scene extends Phaser.Scene {
     }
     
     getSafeAreaOffset() {
-        // Return the safe area offset for mobile devices with browser chrome
+        // Dynamically compute bottom safe area using the Visual Viewport API so
+        // touch controls stay above browser chrome (URL bar / nav bar) on iOS Safari.
+        // visualViewport.height = actual visible area; window.innerHeight = full layout
+        // viewport (may include area behind browser chrome on iOS).
+        if (window.visualViewport) {
+            const bottomChrome = Math.max(
+                0,
+                window.innerHeight
+                    - window.visualViewport.height
+                    - (window.visualViewport.offsetTop || 0)
+            );
+            if (bottomChrome > 0) {
+                return Math.max(bottomChrome + CHROME_PADDING_OFFSET, this.safeAreaOffset);
+            }
+        }
+        // Fallback for iOS Safari: visualViewport.height equals window.innerHeight so
+        // bottomChrome is 0, yet the toolbar still overlays the canvas content.
+        // Detect mobile browser mode (non-standalone) and use a larger fixed offset
+        // that clears the ~44px toolbar + ~34px home indicator + button radius.
+        if (this.isMobileDevice) {
+            const isStandalone = window.navigator.standalone === true ||
+                window.matchMedia('(display-mode: standalone)').matches;
+            if (!isStandalone) {
+                return Math.max(this.safeAreaOffset, MOBILE_BROWSER_CHROME_SAFE_AREA);
+            }
+        }
         return this.safeAreaOffset;
     }
     
@@ -372,9 +427,14 @@ class Level1Scene extends Phaser.Scene {
             this.planetSprite.setPosition(this.cameraWidth / 2, this.cameraHeight);
         }
         
-        // Update world bounds
+        // Update world bounds - on mobile constrain bottom to visible area above controls
         if (this.physics && this.physics.world) {
-            this.physics.world.setBounds(0, 0, this.cameraWidth, this.cameraHeight);
+            if (this.isMobileDevice) {
+                const safeAreaOffset = this.getSafeAreaOffset();
+                this.physics.world.setBounds(0, 0, this.cameraWidth, this.cameraHeight - safeAreaOffset + MOBILE_BOUNDS_BUFFER);
+            } else {
+                this.physics.world.setBounds(0, 0, this.cameraWidth, this.cameraHeight);
+            }
         }
         
         // Update mobile controls position with safe area offset
@@ -481,7 +541,14 @@ class Level1Scene extends Phaser.Scene {
         const startX = this.cameraWidth * PlayerConfig.startX;
         // For level 7, the Romulan warbird starts at the bottom, so the Aurora needs to start higher
         const startYFraction = this.levelNumber === 7 ? 0.35 : PlayerConfig.startY;
-        const startY = this.cameraHeight * startYFraction;
+        // Position ship just above the touch controls, accounting for browser chrome on mobile.
+        // In standalone/desktop mode currentSafeAreaOffset=120 → startY = cameraHeight*0.75 (same as before).
+        // In mobile browser mode currentSafeAreaOffset=300 → clamp ship into the visible area above toolbar.
+        const currentSafeAreaOffset = this.getSafeAreaOffset();
+        const defaultStartY = this.cameraHeight * startYFraction;
+        const startY = currentSafeAreaOffset > this.safeAreaOffset
+            ? Math.min(defaultStartY, this.cameraHeight - currentSafeAreaOffset - 80)
+            : defaultStartY;
         this.player = this.physics.add.sprite(startX, startY, 'player-ship');
         this.player.setCollideWorldBounds(true);
         
