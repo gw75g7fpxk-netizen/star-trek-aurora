@@ -14,103 +14,136 @@ class UpgradesScene extends Phaser.Scene {
         // Load progress data
         this.saveData = ProgressConfig.loadProgress()
         this.selectedCategory = 'offensive' // Default category
-        
+
         // Background
         this.createStarfield()
+
+        // LCARS header + footer bands
+        const hH = isMobile ? 44 : 58
+        const fH = isMobile ? 28 : 36
+        this.lcarsHeaderH = hH
+        this.lcarsFooterH = fH
+        this.createLCARSHeader(width, height, hH, fH, isMobile)
         
-        // Title
-        const titleSize = isMobile ? '24px' : '32px'
-        const titleY = isMobile ? 30 : 40
-        const title = this.add.text(width / 2, titleY, 'SHIP UPGRADES', {
-            fontSize: titleSize,
-            color: '#FF9900',
+        // Title placed inside the header band
+        this.add.text(width / 2, hH / 2, 'SHIP UPGRADES', {
+            fontSize: isMobile ? '22px' : '30px',
+            color: '#000000',
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'
-        })
-        title.setOrigin(0.5)
+        }).setOrigin(0.5)
         
-        // Points display (will be updated)
-        const pointsSize = isMobile ? '18px' : '22px'
-        const pointsY = isMobile ? 60 : 75
+        // Credits display (will be updated) — just below the header
+        const pointsY = hH + (isMobile ? 20 : 24)
         this.pointsText = this.add.text(width / 2, pointsY, `Credits: ${this.saveData.upgradePoints}`, {
-            fontSize: pointsSize,
-            color: '#FFFF00',
+            fontSize: isMobile ? '16px' : '20px',
+            color: '#FFCC00',
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'
         })
         this.pointsText.setOrigin(0.5)
         
-        // Category tabs
+        // Category tabs (LCARS-styled, just below credits)
         this.createCategoryTabs(isMobile)
         
-        // Upgrade list container
-        const listStartY = isMobile ? 140 : 160
+        // Upgrade list
+        const listStartY = hH + (isMobile ? 90 : 110)
         this.upgradeListY = listStartY
         this.createUpgradeList(isMobile)
         
-        // Reset button
-        const resetButtonY = isMobile ? height - 160 : height - 90
-        const resetButtonSize = isMobile ? '16px' : '18px'
-        const resetButton = this.add.text(width / 2, resetButtonY, '[ RESET ALL UPGRADES ]', {
-            fontSize: resetButtonSize,
+        // Reset button — anchored above the footer
+        const resetButtonY = height - fH - (isMobile ? 52 : 58)
+        const resetBtnW = isMobile ? 200 : 240
+        const resetBtnH = isMobile ? 34 : 40
+        const resetBg = this.add.rectangle(width / 2, resetButtonY, resetBtnW, resetBtnH, 0x330800, 1)
+        resetBg.setStrokeStyle(2, 0xFF6600, 1)
+        resetBg.setInteractive({ useHandCursor: true })
+        const resetText = this.add.text(width / 2, resetButtonY, '[ RESET ALL UPGRADES ]', {
+            fontSize: isMobile ? '14px' : '16px',
             color: '#FF6600',
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'
+        }).setOrigin(0.5)
+        resetBg.on('pointerdown', () => this.resetUpgrades())
+        resetBg.on('pointerover', () => {
+            resetBg.setFillStyle(0x551100)
+            resetText.setColor('#FF9900')
         })
-        resetButton.setOrigin(0.5)
-        resetButton.setInteractive()
-        
-        resetButton.on('pointerdown', () => {
-            this.resetUpgrades()
-        })
-        
-        resetButton.on('pointerover', () => {
-            resetButton.setColor('#FF9900')
-            resetButton.setScale(1.05)
+        resetBg.on('pointerout', () => {
+            resetBg.setFillStyle(0x330800)
+            resetText.setColor('#FF6600')
         })
         
-        resetButton.on('pointerout', () => {
-            resetButton.setColor('#FF6600')
-            resetButton.setScale(1.0)
-        })
-        
-        // Back button
-        const backButtonY = isMobile ? height - 110 : height - 50
-        const backButtonSize = isMobile ? '18px' : '20px'
-        const backButton = this.add.text(width / 2, backButtonY, '[ BACK TO MENU ]', {
-            fontSize: backButtonSize,
-            color: '#00FF00',
+        // Back button in the orange footer bar
+        const backButton = this.add.text(width / 2, height - fH / 2, '[ BACK TO MENU ]', {
+            fontSize: isMobile ? '14px' : '16px',
+            color: '#000000',
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'
-        })
-        backButton.setOrigin(0.5)
+        }).setOrigin(0.5)
         backButton.setInteractive()
+        backButton.on('pointerdown', () => this.scene.start('MainMenuScene'))
+        backButton.on('pointerover', () => backButton.setColor('#333300'))
+        backButton.on('pointerout', () => backButton.setColor('#000000'))
         
-        backButton.on('pointerdown', () => {
-            this.scene.start('MainMenuScene')
-        })
-        
-        backButton.on('pointerover', () => {
-            backButton.setColor('#00FFFF')
-            backButton.setScale(1.05)
-        })
-        
-        backButton.on('pointerout', () => {
-            backButton.setColor('#00FF00')
-            backButton.setScale(1.0)
-        })
-        
-        // Keyboard shortcuts
+        // Keyboard shortcut
         this.input.keyboard.once('keydown-ESC', () => {
             this.scene.start('MainMenuScene')
         })
     }
+
+    // Converts a CSS hex colour string (e.g. '#FF6600') to a Phaser integer colour.
+    hexToInt(hex) {
+        return parseInt(hex.slice(1), 16)
+    }
+
+    // Draws a slim LCARS-style header band and footer bar (shared with LevelSelectScene style).
+    createLCARSHeader(width, height, hH, fH, isMobile) {
+        const gfx = this.add.graphics()
+
+        // Orange header band (full width)
+        gfx.fillStyle(0xFF9900, 1)
+        gfx.fillRect(0, 0, width, hH)
+
+        // Peach accent stripe on the left
+        gfx.fillStyle(0xFF9966, 1)
+        gfx.fillRect(0, 0, isMobile ? 60 : 80, hH)
+
+        // System label on the left accent
+        this.add.text(isMobile ? 30 : 40, hH / 2, 'LCARS', {
+            fontSize: isMobile ? '10px' : '12px',
+            color: '#000000',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold'
+        }).setOrigin(0.5)
+
+        // Thin accent lines below the header
+        gfx.fillStyle(0xFF9900, 0.5)
+        gfx.fillRect(0, hH + 3, width, 2)
+        gfx.fillStyle(0x9999CC, 0.35)
+        gfx.fillRect(0, hH + 8, width, 1)
+
+        // Orange footer bar
+        gfx.fillStyle(0xFF9900, 1)
+        gfx.fillRect(0, height - fH, width, fH)
+
+        // Right-side header data tag
+        this.add.text(width - 10, hH / 2, 'USS AURORA', {
+            fontSize: isMobile ? '10px' : '13px',
+            color: '#000000',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold'
+        }).setOrigin(1, 0.5)
+    }
     
     createCategoryTabs(isMobile) {
         const width = this.cameras.main.width
-        const tabY = isMobile ? 95 : 115
-        const tabSize = isMobile ? '14px' : '16px'
-        const spacing = isMobile ? 120 : 160
+        const hH = this.lcarsHeaderH || 58
+        const tabY = hH + (isMobile ? 52 : 62)
+        const tabW = isMobile ? 100 : 130
+        const tabH = isMobile ? 28 : 34
+        const tabSize = isMobile ? '13px' : '15px'
+        const spacing = isMobile ? 110 : 145
         
         this.categoryTabs = {}
         const categories = ['offensive', 'defensive', 'movement']
@@ -119,33 +152,38 @@ class UpgradesScene extends Phaser.Scene {
         categories.forEach((categoryKey, index) => {
             const category = UpgradesConfig.categories[categoryKey]
             const x = startX + index * spacing
-            
+            const isActive = categoryKey === this.selectedCategory
+            const activeColorInt = this.hexToInt(category.color)
+            const inactiveColorInt = 0x333333
+
+            const bg = this.add.rectangle(x, tabY, tabW, tabH, isActive ? activeColorInt : inactiveColorInt, 1)
+            bg.setStrokeStyle(1, isActive ? activeColorInt : 0x666666, 1)
+            bg.setInteractive({ useHandCursor: true })
+
             const tab = this.add.text(x, tabY, category.name, {
                 fontSize: tabSize,
-                color: categoryKey === this.selectedCategory ? category.color : '#888888',
+                color: isActive ? '#000000' : '#888888',
                 fontFamily: 'Courier New, monospace',
                 fontStyle: 'bold'
-            })
-            tab.setOrigin(0.5)
-            tab.setInteractive()
-            
-            tab.on('pointerdown', () => {
+            }).setOrigin(0.5)
+
+            bg.on('pointerdown', () => {
                 this.switchCategory(categoryKey)
             })
-            
-            tab.on('pointerover', () => {
+            bg.on('pointerover', () => {
                 if (categoryKey !== this.selectedCategory) {
+                    bg.setFillStyle(0x555555)
                     tab.setColor('#CCCCCC')
                 }
             })
-            
-            tab.on('pointerout', () => {
+            bg.on('pointerout', () => {
                 if (categoryKey !== this.selectedCategory) {
+                    bg.setFillStyle(inactiveColorInt)
                     tab.setColor('#888888')
                 }
             })
             
-            this.categoryTabs[categoryKey] = tab
+            this.categoryTabs[categoryKey] = { bg, text: tab }
         })
     }
     
@@ -154,11 +192,15 @@ class UpgradesScene extends Phaser.Scene {
         
         this.selectedCategory = categoryKey
         
-        // Update tab colors
+        // Update tab background and text colours
         Object.keys(this.categoryTabs).forEach(key => {
             const category = UpgradesConfig.categories[key]
-            const tab = this.categoryTabs[key]
-            tab.setColor(key === categoryKey ? category.color : '#888888')
+            const { bg, text } = this.categoryTabs[key]
+            const isActive = key === categoryKey
+            const activeColorInt = this.hexToInt(category.color)
+            bg.setFillStyle(isActive ? activeColorInt : 0x333333)
+            bg.setStrokeStyle(1, isActive ? activeColorInt : 0x666666, 1)
+            text.setColor(isActive ? '#000000' : '#888888')
         })
         
         // Recreate upgrade list

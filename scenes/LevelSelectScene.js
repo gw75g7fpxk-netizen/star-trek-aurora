@@ -19,13 +19,20 @@ class LevelSelectScene extends Phaser.Scene {
         
         // Background starfield
         this.createStarfield()
+
+        // LCARS header band
+        const hH = isMobile ? 44 : 58
+        const fH = isMobile ? 28 : 36
+        this.lcarsHeaderH = hH
+        this.lcarsFooterH = fH
+        this.createLCARSHeader(width, height, hH, fH, isMobile)
         
-        // Title
-        const titleSize = isMobile ? '28px' : '36px'
-        const titleY = isMobile ? 35 : 30
+        // Title placed inside the header band
+        const titleSize = isMobile ? '22px' : '30px'
+        const titleY = hH / 2
         const title = this.add.text(width / 2, titleY, 'MISSION SELECT', {
             fontSize: titleSize,
-            color: '#FF9900',
+            color: '#000000',
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'
         })
@@ -82,6 +89,45 @@ class LevelSelectScene extends Phaser.Scene {
             
             this.add.circle(x, y, size, 0xFFFFFF, alpha)
         }
+    }
+
+    // Draws a slim LCARS-style header band and footer bar.
+    createLCARSHeader(width, height, hH, fH, isMobile) {
+        const gfx = this.add.graphics()
+
+        // Orange header band (full width)
+        gfx.fillStyle(0xFF9900, 1)
+        gfx.fillRect(0, 0, width, hH)
+
+        // Peach accent stripe at the left of the header
+        gfx.fillStyle(0xFF9966, 1)
+        gfx.fillRect(0, 0, isMobile ? 60 : 80, hH)
+
+        // System label on the left accent
+        this.add.text(isMobile ? 30 : 40, hH / 2, 'LCARS', {
+            fontSize: isMobile ? '10px' : '12px',
+            color: '#000000',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold'
+        }).setOrigin(0.5)
+
+        // Thin horizontal accent lines below the header (into content area)
+        gfx.fillStyle(0xFF9900, 0.5)
+        gfx.fillRect(0, hH + 3, width, 2)
+        gfx.fillStyle(0x9999CC, 0.35)
+        gfx.fillRect(0, hH + 8, width, 1)
+
+        // Orange footer bar
+        gfx.fillStyle(0xFF9900, 1)
+        gfx.fillRect(0, height - fH, width, fH)
+
+        // Right-side header data tag
+        this.add.text(width - 10, hH / 2, 'USS AURORA', {
+            fontSize: isMobile ? '10px' : '13px',
+            color: '#000000',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold'
+        }).setOrigin(1, 0.5)
     }
     
     createLevelMap(isMobile) {
@@ -226,89 +272,117 @@ class LevelSelectScene extends Phaser.Scene {
             panelHeight = height * 0.7
         }
         
+        // LCARS-styled panel: dark fill with orange/peach top accent bar
         const panel = this.add.graphics()
-        panel.fillStyle(0x000000, 0.8)
+        panel.fillStyle(0x050510, 0.92)
         panel.fillRect(panelX, panelY, panelWidth, panelHeight)
-        panel.lineStyle(isMobile ? 2 : 3, 0x00FFFF, 1)
+
+        // Left accent bar (peach)
+        panel.fillStyle(0xFF9966, 1)
+        panel.fillRect(panelX, panelY, isMobile ? 6 : 8, panelHeight)
+
+        // Top accent bar (orange)
+        panel.fillStyle(0xFF9900, 1)
+        panel.fillRect(panelX, panelY, panelWidth, isMobile ? 4 : 5)
+
+        // Bottom accent bar (orange)
+        panel.fillStyle(0xFF9900, 1)
+        panel.fillRect(panelX, panelY + panelHeight - (isMobile ? 4 : 5), panelWidth, isMobile ? 4 : 5)
+
+        // Thin cyan right border
+        panel.lineStyle(1, 0x00FFFF, 0.5)
         panel.strokeRect(panelX, panelY, panelWidth, panelHeight)
         
         // Info panel text (will be updated dynamically)
-        const padding = isMobile ? 10 : 20
+        const leftPad = isMobile ? 14 : 18
+        const topPad = isMobile ? 12 : 14
         const nameSize = isMobile ? '18px' : '24px'
         const descSize = isMobile ? '12px' : '16px'
         const statsSize = isMobile ? '11px' : '14px'
         
         this.infoPanelTexts = {
-            levelName: this.add.text(panelX + padding, panelY + padding, '', {
+            levelName: this.add.text(panelX + leftPad, panelY + topPad, '', {
                 fontSize: nameSize,
                 color: '#FF9900',
                 fontFamily: 'Courier New, monospace',
                 fontStyle: 'bold',
-                wordWrap: { width: panelWidth - padding * 2 }
+                wordWrap: { width: panelWidth - leftPad * 2 }
             }),
-            description: this.add.text(panelX + padding, panelY + padding + (isMobile ? 50 : 60), '', {
+            description: this.add.text(panelX + leftPad, panelY + topPad + (isMobile ? 50 : 60), '', {
                 fontSize: descSize,
-                color: '#FFFFFF',
+                color: '#CCCCCC',
                 fontFamily: 'Courier New, monospace',
-                wordWrap: { width: panelWidth - padding * 2 }
+                wordWrap: { width: panelWidth - leftPad * 2 }
             }),
-            stats: this.add.text(panelX + padding, panelY + padding + (isMobile ? 100 : 120), '', {
+            stats: this.add.text(panelX + leftPad, panelY + topPad + (isMobile ? 100 : 120), '', {
                 fontSize: statsSize,
-                color: '#00FFFF',
+                color: '#88CCFF',
                 fontFamily: 'Courier New, monospace',
-                wordWrap: { width: panelWidth - padding * 2 }
+                wordWrap: { width: panelWidth - leftPad * 2 }
             }),
-            locked: this.add.text(panelX + padding, panelY + padding + (isMobile ? 100 : 120), '', {
+            locked: this.add.text(panelX + leftPad, panelY + topPad + (isMobile ? 100 : 120), '', {
                 fontSize: descSize,
-                color: '#FF0000',
+                color: '#FF6655',
                 fontFamily: 'Courier New, monospace',
-                wordWrap: { width: panelWidth - padding * 2 }
+                wordWrap: { width: panelWidth - leftPad * 2 }
             })
         }
         
-        // Play button
-        const buttonSize = isMobile ? '18px' : '24px'
-        const buttonY = panelY + panelHeight - (isMobile ? 50 : 60)
-        const buttonText = isMobile ? '[ LAUNCH ]' : '[ LAUNCH MISSION ]'
-        this.playButton = this.add.text(panelX + panelWidth / 2, buttonY, buttonText, {
-            fontSize: buttonSize,
-            color: '#00FF00',
+        // Launch button styled as a LCARS rectangular button
+        const btnW = isMobile ? panelWidth - leftPad * 2 : panelWidth - 40
+        const btnH = isMobile ? 36 : 44
+        const btnX = panelX + panelWidth / 2
+        const btnY = panelY + panelHeight - (isMobile ? 46 : 58)
+        const btnLabel = isMobile ? '[ LAUNCH ]' : '[ LAUNCH MISSION ]'
+
+        const btnBg = this.add.rectangle(btnX, btnY, btnW, btnH, 0x003322, 1)
+        btnBg.setStrokeStyle(2, 0x00AA55, 1)
+        btnBg.setInteractive({ useHandCursor: true })
+
+        this.playButton = this.add.text(btnX, btnY, btnLabel, {
+            fontSize: isMobile ? '16px' : '22px',
+            color: '#00FF88',
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'
-        })
-        this.playButton.setOrigin(0.5)
-        this.playButton.setInteractive()
+        }).setOrigin(0.5)
+
+        // Store the background so setLaunchButtonVisible() can control both together
+        this.playButtonBg = btnBg
         
-        this.playButton.on('pointerdown', () => {
+        btnBg.on('pointerdown', () => {
             this.launchLevel()
         })
-        
-        this.playButton.on('pointerover', () => {
-            this.playButton.setColor('#00FFFF')
-            this.playButton.setScale(1.05)
+        btnBg.on('pointerover', () => {
+            btnBg.setFillStyle(0x005533)
+            this.playButton.setColor('#00FFCC')
         })
-        
-        this.playButton.on('pointerout', () => {
-            this.playButton.setColor('#00FF00')
-            this.playButton.setScale(1.0)
+        btnBg.on('pointerout', () => {
+            btnBg.setFillStyle(0x003322)
+            this.playButton.setColor('#00FF88')
         })
+    }
+
+    // Controls visibility of both the launch button background and its label together.
+    setLaunchButtonVisible(visible) {
+        this.playButtonBg.setVisible(visible)
+        this.playButton.setVisible(visible)
     }
     
     createBackButton(isMobile) {
         const width = this.cameras.main.width
         const height = this.cameras.main.height
+        const fH = this.lcarsFooterH || 36
         
-        // Position back button based on screen size
-        // Mobile: Button near bottom but clear of OS touch areas and info panel
-        // Desktop: Button at top to avoid overlap with level map
-        const backSize = isMobile ? '16px' : '18px'
+        // Back button sits centred in the orange footer bar
+        const backSize = isMobile ? '14px' : '16px'
         const backX = width / 2
-        const backY = isMobile ? height - 85 : 30
+        const backY = height - fH / 2
         
         const backButton = this.add.text(backX, backY, '[ BACK TO MENU ]', {
             fontSize: backSize,
-            color: '#888888',
-            fontFamily: 'Courier New, monospace'
+            color: '#000000',
+            fontFamily: 'Courier New, monospace',
+            fontStyle: 'bold'
         })
         backButton.setOrigin(0.5)
         backButton.setInteractive()
@@ -318,11 +392,11 @@ class LevelSelectScene extends Phaser.Scene {
         })
         
         backButton.on('pointerover', () => {
-            backButton.setColor('#00FFFF')
+            backButton.setColor('#333300')
         })
         
         backButton.on('pointerout', () => {
-            backButton.setColor('#888888')
+            backButton.setColor('#000000')
         })
     }
     
@@ -358,19 +432,19 @@ class LevelSelectScene extends Phaser.Scene {
             )
             this.infoPanelTexts.stats.setVisible(true)
             this.infoPanelTexts.locked.setVisible(false)
-            this.playButton.setVisible(true)
+            this.setLaunchButtonVisible(true)
         } else if (isUnlocked) {
             // Show unlocked but not completed
             this.infoPanelTexts.stats.setText('STATUS: READY\n\nMission not yet attempted')
             this.infoPanelTexts.stats.setVisible(true)
             this.infoPanelTexts.locked.setVisible(false)
-            this.playButton.setVisible(true)
+            this.setLaunchButtonVisible(true)
         } else {
             // Show locked
             this.infoPanelTexts.stats.setVisible(false)
             this.infoPanelTexts.locked.setText('🔒 LOCKED\n\nComplete previous missions to unlock this level')
             this.infoPanelTexts.locked.setVisible(true)
-            this.playButton.setVisible(false)
+            this.setLaunchButtonVisible(false)
         }
     }
     
