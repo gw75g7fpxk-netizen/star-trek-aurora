@@ -522,7 +522,14 @@ class Level1Scene extends Phaser.Scene {
         const startX = this.cameraWidth * PlayerConfig.startX;
         // For level 7, the Romulan warbird starts at the bottom, so the Aurora needs to start higher
         const startYFraction = this.levelNumber === 7 ? 0.35 : PlayerConfig.startY;
-        const startY = this.cameraHeight * startYFraction;
+        // Position ship just above the touch controls, accounting for browser chrome on mobile.
+        // In standalone/desktop mode currentSafeAreaOffset=120 → startY = cameraHeight*0.75 (same as before).
+        // In mobile browser mode currentSafeAreaOffset=300 → clamp ship into the visible area above toolbar.
+        const currentSafeAreaOffset = this.getSafeAreaOffset();
+        const defaultStartY = this.cameraHeight * startYFraction;
+        const startY = currentSafeAreaOffset > this.safeAreaOffset
+            ? Math.min(defaultStartY, this.cameraHeight - currentSafeAreaOffset - 80)
+            : defaultStartY;
         this.player = this.physics.add.sprite(startX, startY, 'player-ship');
         this.player.setCollideWorldBounds(true);
         
