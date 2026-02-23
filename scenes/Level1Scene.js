@@ -100,6 +100,7 @@ const WARBIRD_CLOAK_MAX_COUNT = 3;        // Number of times warbird cloaks duri
 const WARBIRD_CLOAK_HEALTH_FRACTION = 0.5; // Triggers at 50% of total health+shields
 const WARBIRD_INITIAL_DECLOAK_DELAY = 750; // Milliseconds after spawn before the warbird decloaks
 const WARBIRD_SPAWN_BOTTOM_MARGIN = 20;   // Pixels between bottom of warbird sprite and screen edge at spawn
+const WARBIRD_SPAWN_Y_FRACTION = 0.85;    // Y position as fraction of screen height for warbird chase movement
 
 // USS Sentinel constants for Level 5
 const SENTINEL_Y_FRACTION = 0.85; // Y position as fraction of screen height
