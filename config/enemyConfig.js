@@ -169,7 +169,7 @@ const EnemyConfig = {
         points: 300,
         movementPattern: 'horizontal',
         straightFire: true, // Fires bullets straight down instead of targeting player
-        size: { width: 70, height: 70 },
+        size: { width: 55, height: 55 },
         texture: 'enemy-destroyer'
     },
     
