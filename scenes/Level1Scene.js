@@ -2116,7 +2116,7 @@ class Level1Scene extends Phaser.Scene {
         
         // Choose color based on health percentage
         let healthColor;
-        if (healthPercent > 0.5) {
+        if (healthPercent > 0.7) {
             healthColor = 0x00ff00; // Green
         } else if (healthPercent > 0.35) {
             healthColor = 0xffff00; // Yellow
@@ -4121,6 +4121,7 @@ class Level1Scene extends Phaser.Scene {
                 // Check if rescue is complete
                 if (progress >= 1.0) {
                     this.completePodRescue(pod);
+                    return; // Pod is destroyed; stop processing this pod
                 }
             } else {
                 // Player moved too far away - reset rescue timer

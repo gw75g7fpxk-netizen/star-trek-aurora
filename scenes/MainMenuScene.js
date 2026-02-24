@@ -11,20 +11,23 @@ class MainMenuScene extends Phaser.Scene {
 
         console.log('MainMenuScene: Starting main menu...')
 
-        // LCARS background using 9-slice so the decorative chrome stays crisp
-        // while the large black center region stretches to fill any screen size.
-        // Source image (lcars-menu-background.jpeg) is 1280x960:
-        //   left column  : x 0–155  (LCARS panel column)
-        //   upper section: y 0–275  (black title area)
-        //   stripe band  : y 275–340 (horizontal LCARS chrome)
-        //   lower section: y 340–960 (black button / content area)
-        // Slice: leftWidth=155, rightWidth=0, topHeight=340, bottomHeight=0
+        // LCARS background using 9-slice.
+        // Source image (lcars-menu-background.jpeg) is 1280x876.
+        // Stretch zone: bottom 1px row across the full image width
+        //   (topHeight=875, all else fixed). The orange on the left column
+        //   at the bottom edge repeats downward to fill any extra height.
+        // Display at least the natural image width to prevent horizontal squishing;
+        // on narrow screens the canvas clips the right side.
+        const IMAGE_WIDTH = 1280
+        const IMAGE_HEIGHT = 876
+        const displayWidth = Math.max(width, IMAGE_WIDTH)
+        const displayHeight = Math.max(height, IMAGE_HEIGHT)
         this.add.nineslice(
-            width / 2, height / 2,
+            0, 0,
             'lcars-menu-background', null,
-            width, height,
-            155, 0, 340, 0
-        )
+            displayWidth, displayHeight,
+            0, 0, IMAGE_HEIGHT - 1, 0
+        ).setOrigin(0, 0)
 
         // ── Title – upper black section (image y 0–275, fixed in 9-slice) ──
         const titleSize = isMobile ? '40px' : '60px'
