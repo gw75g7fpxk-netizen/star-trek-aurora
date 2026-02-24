@@ -8,15 +8,30 @@ class MainMenuScene extends Phaser.Scene {
         const width = this.cameras.main.width
         const height = this.cameras.main.height
         const isMobile = width < 600 || height < 600
-        
+
         console.log('MainMenuScene: Starting main menu...')
-        
-        // Background - starfield effect
-        this.createStarfield()
-        
-        // Title with LCARS styling - adjust size for mobile
-        const titleSize = isMobile ? '48px' : '72px'
-        const titleY = isMobile ? 60 : height / 4
+
+        // LCARS background using 9-slice so the decorative chrome stays crisp
+        // while the large black center region stretches to fill any screen size.
+        // Source image (lcars-menu-background.jpeg) is 1280x960:
+        //   left column  : x 0–155  (LCARS panel column)
+        //   upper section: y 0–275  (black title area)
+        //   stripe band  : y 275–340 (horizontal LCARS chrome)
+        //   lower section: y 340–960 (black button / content area)
+        // Slice: leftWidth=155, rightWidth=0, topHeight=340, bottomHeight=0
+        this.add.nineslice(
+            width / 2, height / 2,
+            'lcars-menu-background', null,
+            width, height,
+            155, 0, 340, 0
+        )
+
+        // ── Title – upper black section (image y 0–275, fixed in 9-slice) ──
+        const titleSize = isMobile ? '40px' : '60px'
+        const subtitleSize = isMobile ? '28px' : '44px'
+        const titleY = isMobile ? 90 : 110
+        const subtitleY = titleY + (isMobile ? 44 : 60)
+
         const title = this.add.text(width / 2, titleY, 'STAR TREK', {
             fontSize: titleSize,
             color: '#FF9900',
@@ -24,9 +39,7 @@ class MainMenuScene extends Phaser.Scene {
             fontStyle: 'bold'
         })
         title.setOrigin(0.5)
-        
-        const subtitleSize = isMobile ? '32px' : '48px'
-        const subtitleY = isMobile ? 100 : height / 4 + 70
+
         const subtitle = this.add.text(width / 2, subtitleY, 'AURORA', {
             fontSize: subtitleSize,
             color: '#00FFFF',
@@ -34,19 +47,19 @@ class MainMenuScene extends Phaser.Scene {
             fontStyle: 'bold'
         })
         subtitle.setOrigin(0.5)
-        
-        // Load progress to check if player has unlocked levels
+
+        // ── Buttons – lower black section (below stripe at y=340) ──
         const saveData = ProgressConfig.loadProgress()
         const unlockedCount = saveData.unlockedLevels.length
-        
-        // Menu buttons with LCARS styling
-        const buttonY = isMobile ? 180 : height / 2 + 20
-        const buttonSpacing = isMobile ? 70 : 80
-        const buttonSize = isMobile ? '24px' : '32px'
-        const infoSize = isMobile ? '14px' : '16px'
-        
-        // Level Select button
-        const levelSelectButton = this.add.text(width / 2, buttonY, '[ MISSION SELECT ]', {
+
+        const buttonSpacing = isMobile ? 65 : 85
+        // Keep buttons comfortably below the LCARS stripe
+        const buttonBaseY = isMobile ? 360 : Math.max(Math.floor(height * 0.62), 360)
+        const buttonSize = isMobile ? '22px' : '32px'
+        const infoSize = isMobile ? '12px' : '16px'
+
+        // Mission Select button
+        const levelSelectButton = this.add.text(width / 2, buttonBaseY, '[ MISSION SELECT ]', {
             fontSize: buttonSize,
             color: '#00FF00',
             fontFamily: 'Courier New, monospace',
@@ -54,31 +67,26 @@ class MainMenuScene extends Phaser.Scene {
         })
         levelSelectButton.setOrigin(0.5)
         levelSelectButton.setInteractive()
-        
-        // Display unlocked levels count
-        const levelProgress = this.add.text(width / 2, buttonY + 30, `${unlockedCount} of 10 missions unlocked`, {
+
+        const levelProgress = this.add.text(width / 2, buttonBaseY + (isMobile ? 24 : 34), `${unlockedCount} of 10 missions unlocked`, {
             fontSize: infoSize,
             color: '#FFFF00',
             fontFamily: 'Courier New, monospace'
         })
         levelProgress.setOrigin(0.5)
-        
-        levelSelectButton.on('pointerdown', () => {
-            this.scene.start('LevelSelectScene')
-        })
-        
+
+        levelSelectButton.on('pointerdown', () => { this.scene.start('LevelSelectScene') })
         levelSelectButton.on('pointerover', () => {
             levelSelectButton.setColor('#00FFFF')
             levelSelectButton.setScale(1.05)
         })
-        
         levelSelectButton.on('pointerout', () => {
             levelSelectButton.setColor('#00FF00')
             levelSelectButton.setScale(1.0)
         })
-        
-        // Upgrades button (placeholder for future feature)
-        const upgradesButton = this.add.text(width / 2, buttonY + buttonSpacing, '[ SHIP UPGRADES ]', {
+
+        // Ship Upgrades button
+        const upgradesButton = this.add.text(width / 2, buttonBaseY + buttonSpacing, '[ SHIP UPGRADES ]', {
             fontSize: buttonSize,
             color: '#00FF00',
             fontFamily: 'Courier New, monospace',
@@ -86,78 +94,47 @@ class MainMenuScene extends Phaser.Scene {
         })
         upgradesButton.setOrigin(0.5)
         upgradesButton.setInteractive()
-        
-        // Display upgrade points
-        const upgradePoints = this.add.text(width / 2, buttonY + buttonSpacing + 30, `${saveData.upgradePoints} upgrade points available`, {
+
+        const upgradePoints = this.add.text(width / 2, buttonBaseY + buttonSpacing + (isMobile ? 24 : 34), `${saveData.upgradePoints} upgrade points available`, {
             fontSize: infoSize,
             color: '#FFFF00',
             fontFamily: 'Courier New, monospace'
         })
         upgradePoints.setOrigin(0.5)
-        
-        upgradesButton.on('pointerdown', () => {
-            this.scene.start('UpgradesScene')
-        })
-        
+
+        upgradesButton.on('pointerdown', () => { this.scene.start('UpgradesScene') })
         upgradesButton.on('pointerover', () => {
             upgradesButton.setColor('#00FFFF')
             upgradesButton.setScale(1.05)
         })
-        
         upgradesButton.on('pointerout', () => {
             upgradesButton.setColor('#00FF00')
             upgradesButton.setScale(1.0)
         })
-        
-        // High Score display - position higher on mobile to prevent cutoff
+
+        // ── Footer – high score & version ──
         const highScore = this.getHighScore()
-        const highScoreY = isMobile ? height - 80 : height - 60
-        const highScoreSize = isMobile ? '16px' : '20px'
+        const highScoreY = isMobile ? height - 50 : height - 40
+        const highScoreSize = isMobile ? '14px' : '18px'
         this.add.text(width / 2, highScoreY, `High Score: ${highScore}`, {
             fontSize: highScoreSize,
             color: '#FFD700',
             fontFamily: 'Courier New, monospace'
         }).setOrigin(0.5)
-        
-        // Version info
-        const versionY = isMobile ? height - 50 : height - 30
-        const versionSize = isMobile ? '12px' : '14px'
+
+        const versionY = isMobile ? height - 25 : height - 18
         this.add.text(width / 2, versionY, 'v1.0.0', {
-            fontSize: versionSize,
+            fontSize: isMobile ? '11px' : '13px',
             color: '#888888',
             fontFamily: 'Courier New, monospace'
         }).setOrigin(0.5)
-        
-        // Keyboard shortcuts
+
+        // Keyboard shortcut
         this.input.keyboard.once('keydown-SPACE', () => {
             this.scene.start('LevelSelectScene')
         })
     }
-    
-    createStarfield() {
-        const width = this.cameras.main.width
-        const height = this.cameras.main.height
-        
-        // Create animated starfield background
-        for (let i = 0; i < 50; i++) {
-            const x = Phaser.Math.Between(0, width)
-            const y = Phaser.Math.Between(0, height)
-            const size = Phaser.Math.Between(1, 3)
-            const alpha = Phaser.Math.FloatBetween(0.3, 0.8)
-            
-            const star = this.add.circle(x, y, size, 0xFFFFFF, alpha)
-            
-            // Twinkling animation
-            this.tweens.add({
-                targets: star,
-                alpha: alpha * 0.3,
-                duration: Phaser.Math.Between(1000, 3000),
-                yoyo: true,
-                repeat: -1
-            })
-        }
-    }
-    
+
     getHighScore() {
         try {
             const saved = localStorage.getItem('starTrekAdventuresHighScore')

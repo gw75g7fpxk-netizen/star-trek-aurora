@@ -103,6 +103,9 @@ class PreloadScene extends Phaser.Scene {
     }
 
     loadPlaceholderAssets() {
+        // Load LCARS main menu background image
+        this.load.image('lcars-menu-background', 'assets/images/lcars-menu-background.jpeg');
+
         // Load actual player ship image (PNG with proper alpha transparency)
         this.load.image('player-ship', 'assets/images/player-ship.png');
         
