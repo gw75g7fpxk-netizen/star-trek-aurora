@@ -13,27 +13,42 @@ class MainMenuScene extends Phaser.Scene {
 
         // LCARS background using 9-slice.
         // Source image (lcars-menu-background.jpeg) is 1280x876.
-        // Stretch zone: bottom 1px row across the full image width
-        //   (topHeight=875, all else fixed). The orange on the left column
-        //   at the bottom edge repeats downward to fill any extra height.
-        // Display at least the natural image width to prevent horizontal squishing;
-        // on narrow screens the canvas clips the right side.
+        // Strategy:
+        //   1. Scale the nineslice proportionally to fit the screen WIDTH
+        //      (uniform setScale) — no horizontal distortion on any screen size.
+        //   2. topHeight=IMAGE_HEIGHT-1 locks the full LCARS chrome;
+        //      only the bottom 1px row (orange strip + black) repeats downward
+        //      to cover any extra screen height.
+        //   3. neededHeight is calculated in texture-space so that after
+        //      uniform scale the rendered height exactly covers the screen.
         const IMAGE_WIDTH = 1280
         const IMAGE_HEIGHT = 876
-        const displayWidth = Math.max(width, IMAGE_WIDTH)
-        const displayHeight = Math.max(height, IMAGE_HEIGHT)
+        const UPPER_BLACK_BOTTOM_Y = 275  // texture y of upper black section bottom
+        const STRIPE_BOTTOM_Y = 340       // texture y of horizontal stripe bottom
+        const scale = width / IMAGE_WIDTH  // proportional scale to fit screen width
+        const neededHeight = Math.max(IMAGE_HEIGHT, Math.ceil(height / scale))
         this.add.nineslice(
             0, 0,
             'lcars-menu-background', null,
-            displayWidth, displayHeight,
+            IMAGE_WIDTH, neededHeight,
             0, 0, IMAGE_HEIGHT - 1, 0
-        ).setOrigin(0, 0)
+        ).setOrigin(0, 0).setScale(scale)
 
-        // ── Title – upper black section (image y 0–275, fixed in 9-slice) ──
-        const titleSize = isMobile ? '40px' : '60px'
-        const subtitleSize = isMobile ? '28px' : '44px'
-        const titleY = isMobile ? 90 : 110
-        const subtitleY = titleY + (isMobile ? 44 : 60)
+        // ── Title – upper black section (texture y 0–UPPER_BLACK_BOTTOM_Y → screen px) ──
+        const upperBlackBottom = Math.round(UPPER_BLACK_BOTTOM_Y * scale)
+        let titleSize, subtitleSize
+        if (upperBlackBottom > 200) {
+            titleSize = '60px'
+            subtitleSize = '44px'
+        } else if (upperBlackBottom > 120) {
+            titleSize = '40px'
+            subtitleSize = '28px'
+        } else {
+            titleSize = '28px'
+            subtitleSize = '20px'
+        }
+        const titleY = Math.round(upperBlackBottom * 0.40)
+        const subtitleY = Math.round(upperBlackBottom * 0.65)
 
         const title = this.add.text(width / 2, titleY, 'STAR TREK', {
             fontSize: titleSize,
@@ -56,8 +71,9 @@ class MainMenuScene extends Phaser.Scene {
         const unlockedCount = saveData.unlockedLevels.length
 
         const buttonSpacing = isMobile ? 65 : 85
-        // Keep buttons comfortably below the LCARS stripe
-        const buttonBaseY = isMobile ? 360 : Math.max(Math.floor(height * 0.62), 360)
+        // Buttons start below the LCARS horizontal stripe (texture y=STRIPE_BOTTOM_Y → screen px)
+        const stripeBottom = Math.round(STRIPE_BOTTOM_Y * scale)
+        const buttonBaseY = Math.max(stripeBottom + 30, Math.round(height * 0.55))
         const buttonSize = isMobile ? '22px' : '32px'
         const infoSize = isMobile ? '12px' : '16px'
 
