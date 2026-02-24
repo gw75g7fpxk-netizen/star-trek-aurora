@@ -24,7 +24,7 @@ class MainMenuScene extends Phaser.Scene {
         const IMAGE_WIDTH = 1280
         const IMAGE_HEIGHT = 876
         const UPPER_BLACK_BOTTOM_Y = 275  // texture y of upper black section bottom
-        const STRIPE_BOTTOM_Y = 340       // texture y of horizontal stripe bottom
+        const LOWER_BLACK_START_Y = 490   // texture y where lower black area begins
         const scale = width / IMAGE_WIDTH  // proportional scale to fit screen width
         const neededHeight = Math.max(IMAGE_HEIGHT, Math.ceil(height / scale))
         this.add.nineslice(
@@ -33,6 +33,8 @@ class MainMenuScene extends Phaser.Scene {
             IMAGE_WIDTH, neededHeight,
             0, 0, IMAGE_HEIGHT - 1, 0
         ).setOrigin(0, 0).setScale(scale)
+
+        const lcarsFont = 'Antonio, Oswald, Arial Narrow, sans-serif'
 
         // ── Title – upper black section (texture y 0–UPPER_BLACK_BOTTOM_Y → screen px) ──
         const upperBlackBottom = Math.round(UPPER_BLACK_BOTTOM_Y * scale)
@@ -50,107 +52,114 @@ class MainMenuScene extends Phaser.Scene {
         const titleY = Math.round(upperBlackBottom * 0.40)
         const subtitleY = Math.round(upperBlackBottom * 0.65)
 
-        const title = this.add.text(width / 2, titleY, 'STAR TREK', {
+        this.add.text(width / 2, titleY, 'STAR TREK', {
             fontSize: titleSize,
             color: '#FF9900',
-            fontFamily: 'Courier New, monospace',
+            fontFamily: lcarsFont,
             fontStyle: 'bold'
-        })
-        title.setOrigin(0.5)
+        }).setOrigin(0.5)
 
-        const subtitle = this.add.text(width / 2, subtitleY, 'AURORA', {
+        this.add.text(width / 2, subtitleY, 'AURORA', {
             fontSize: subtitleSize,
             color: '#00FFFF',
-            fontFamily: 'Courier New, monospace',
+            fontFamily: lcarsFont,
             fontStyle: 'bold'
-        })
-        subtitle.setOrigin(0.5)
+        }).setOrigin(0.5)
 
-        // ── Buttons – lower black section (below stripe at y=340) ──
+        // ── Buttons – lower black section (at top of lower black area) ──
         const saveData = ProgressConfig.loadProgress()
         const unlockedCount = saveData.unlockedLevels.length
 
-        const buttonSpacing = isMobile ? 65 : 85
-        // Buttons start below the LCARS horizontal stripe (texture y=STRIPE_BOTTOM_Y → screen px)
-        const stripeBottom = Math.round(STRIPE_BOTTOM_Y * scale)
-        const buttonBaseY = Math.max(stripeBottom + 30, Math.round(height * 0.55))
-        const buttonSize = isMobile ? '22px' : '32px'
-        const infoSize = isMobile ? '12px' : '16px'
+        // Place buttons just inside the top of the lower black section.
+        // Clamp so buttons always fit above the footer (60px) regardless of screen size.
+        const lowerBlackStart = Math.round(LOWER_BLACK_START_Y * scale)
+        const btnW = Math.min(Math.round(width * 0.65), 340)
+        const btnH = isMobile ? 44 : 54
+        const btnRadius = 10
+        const infoSize = isMobile ? '12px' : '14px'
+        const infoGap = isMobile ? 6 : 8
+        const infoH = isMobile ? 20 : 24
+        const btnGap = isMobile ? 14 : 18
+        const topPad = isMobile ? 16 : 24
+        const FOOTER_HEIGHT = 60  // reserved space at the bottom for high score + version
+        // Total vertical space needed for both buttons + info rows + gap
+        const totalBtnBlock = 2 * btnH + 2 * infoGap + 2 * infoH + btnGap
+        const maxBtnStart = height - totalBtnBlock - FOOTER_HEIGHT
+        const btn1Y = Math.min(lowerBlackStart + topPad, maxBtnStart)
+        const btn2Y = btn1Y + btnH + infoGap + infoH + btnGap
 
         // Mission Select button
-        const levelSelectButton = this.add.text(width / 2, buttonBaseY, '[ MISSION SELECT ]', {
-            fontSize: buttonSize,
-            color: '#00FF00',
-            fontFamily: 'Courier New, monospace',
-            fontStyle: 'bold'
-        })
-        levelSelectButton.setOrigin(0.5)
-        levelSelectButton.setInteractive()
-
-        const levelProgress = this.add.text(width / 2, buttonBaseY + (isMobile ? 24 : 34), `${unlockedCount} of 10 missions unlocked`, {
+        this.createLcarsButton(
+            width / 2, btn1Y, btnW, btnH, btnRadius, lcarsFont,
+            'MISSION SELECT', 0xFF9900, '#000000',
+            () => { this.scene.start('LevelSelectScene') }
+        )
+        this.add.text(width / 2, btn1Y + btnH + infoGap, `${unlockedCount} of 10 missions unlocked`, {
             fontSize: infoSize,
-            color: '#FFFF00',
-            fontFamily: 'Courier New, monospace'
-        })
-        levelProgress.setOrigin(0.5)
-
-        levelSelectButton.on('pointerdown', () => { this.scene.start('LevelSelectScene') })
-        levelSelectButton.on('pointerover', () => {
-            levelSelectButton.setColor('#00FFFF')
-            levelSelectButton.setScale(1.05)
-        })
-        levelSelectButton.on('pointerout', () => {
-            levelSelectButton.setColor('#00FF00')
-            levelSelectButton.setScale(1.0)
-        })
+            color: '#FFAA44',
+            fontFamily: lcarsFont
+        }).setOrigin(0.5)
 
         // Ship Upgrades button
-        const upgradesButton = this.add.text(width / 2, buttonBaseY + buttonSpacing, '[ SHIP UPGRADES ]', {
-            fontSize: buttonSize,
-            color: '#00FF00',
-            fontFamily: 'Courier New, monospace',
-            fontStyle: 'bold'
-        })
-        upgradesButton.setOrigin(0.5)
-        upgradesButton.setInteractive()
-
-        const upgradePoints = this.add.text(width / 2, buttonBaseY + buttonSpacing + (isMobile ? 24 : 34), `${saveData.upgradePoints} upgrade points available`, {
+        this.createLcarsButton(
+            width / 2, btn2Y, btnW, btnH, btnRadius, lcarsFont,
+            'SHIP UPGRADES', 0x9999CC, '#000000',
+            () => { this.scene.start('UpgradesScene') }
+        )
+        this.add.text(width / 2, btn2Y + btnH + infoGap, `${saveData.upgradePoints} upgrade points available`, {
             fontSize: infoSize,
-            color: '#FFFF00',
-            fontFamily: 'Courier New, monospace'
-        })
-        upgradePoints.setOrigin(0.5)
-
-        upgradesButton.on('pointerdown', () => { this.scene.start('UpgradesScene') })
-        upgradesButton.on('pointerover', () => {
-            upgradesButton.setColor('#00FFFF')
-            upgradesButton.setScale(1.05)
-        })
-        upgradesButton.on('pointerout', () => {
-            upgradesButton.setColor('#00FF00')
-            upgradesButton.setScale(1.0)
-        })
+            color: '#AAAAEE',
+            fontFamily: lcarsFont
+        }).setOrigin(0.5)
 
         // ── Footer – high score & version ──
         const highScore = this.getHighScore()
-        const highScoreY = isMobile ? height - 50 : height - 40
-        const highScoreSize = isMobile ? '14px' : '18px'
-        this.add.text(width / 2, highScoreY, `High Score: ${highScore}`, {
-            fontSize: highScoreSize,
+        this.add.text(width / 2, height - (isMobile ? 50 : 40), `High Score: ${highScore}`, {
+            fontSize: isMobile ? '14px' : '18px',
             color: '#FFD700',
-            fontFamily: 'Courier New, monospace'
+            fontFamily: lcarsFont
         }).setOrigin(0.5)
 
-        const versionY = isMobile ? height - 25 : height - 18
-        this.add.text(width / 2, versionY, 'v1.0.0', {
+        this.add.text(width / 2, height - (isMobile ? 25 : 18), 'v1.0.0', {
             fontSize: isMobile ? '11px' : '13px',
             color: '#888888',
-            fontFamily: 'Courier New, monospace'
+            fontFamily: lcarsFont
         }).setOrigin(0.5)
 
         // Keyboard shortcut
         this.input.keyboard.once('keydown-SPACE', () => {
             this.scene.start('LevelSelectScene')
+        })
+    }
+
+    createLcarsButton(x, y, btnWidth, btnHeight, radius, fontFamily, label, fillColor, textColor, onPress) {
+        const bg = this.add.graphics()
+
+        const drawBg = (alpha) => {
+            bg.clear()
+            bg.fillStyle(fillColor, alpha)
+            bg.fillRoundedRect(x - btnWidth / 2, y, btnWidth, btnHeight, radius)
+        }
+        drawBg(1)
+
+        const btnFontSize = btnHeight > 48 ? '24px' : '20px'
+        const text = this.add.text(x, y + btnHeight / 2, label, {
+            fontSize: btnFontSize,
+            color: textColor,
+            fontFamily: fontFamily,
+            fontStyle: 'bold'
+        }).setOrigin(0.5)
+
+        // Interactive zone over the button area
+        const zone = this.add.zone(x, y + btnHeight / 2, btnWidth, btnHeight).setInteractive()
+        zone.on('pointerdown', onPress)
+        zone.on('pointerover', () => {
+            drawBg(0.7)
+            text.setScale(1.04)
+        })
+        zone.on('pointerout', () => {
+            drawBg(1)
+            text.setScale(1.0)
         })
     }
 
