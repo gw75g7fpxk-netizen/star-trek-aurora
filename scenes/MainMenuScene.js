@@ -36,35 +36,21 @@ class MainMenuScene extends Phaser.Scene {
 
         const lcarsFont = 'Antonio, Oswald, Arial Narrow, sans-serif'
 
+        // Button width computed here so title can share the same left alignment
+        const btnW = Math.min(Math.round(width * 0.65), 340)
+        const btnLeft = Math.round(width / 2 - btnW / 2)
+
         // ── Title – upper black section (texture y 0–UPPER_BLACK_BOTTOM_Y → screen px) ──
         const upperBlackBottom = Math.round(UPPER_BLACK_BOTTOM_Y * scale)
-        let titleSize, subtitleSize
-        if (upperBlackBottom > 200) {
-            titleSize = '60px'
-            subtitleSize = '44px'
-        } else if (upperBlackBottom > 120) {
-            titleSize = '40px'
-            subtitleSize = '28px'
-        } else {
-            titleSize = '28px'
-            subtitleSize = '20px'
-        }
-        const titleY = Math.round(upperBlackBottom * 0.40)
-        const subtitleY = Math.round(upperBlackBottom * 0.65)
+        const titleSize = upperBlackBottom > 200 ? '60px' : upperBlackBottom > 120 ? '40px' : '28px'
+        const titleY = Math.round(upperBlackBottom * 0.50)
 
-        this.add.text(width / 2, titleY, 'STAR TREK', {
+        this.add.text(btnLeft, titleY, 'USS Aurora', {
             fontSize: titleSize,
             color: '#FF9900',
             fontFamily: lcarsFont,
             fontStyle: 'bold'
-        }).setOrigin(0.5)
-
-        this.add.text(width / 2, subtitleY, 'AURORA', {
-            fontSize: subtitleSize,
-            color: '#00FFFF',
-            fontFamily: lcarsFont,
-            fontStyle: 'bold'
-        }).setOrigin(0.5)
+        }).setOrigin(0, 0.5)
 
         // ── Buttons – lower black section (at top of lower black area) ──
         const saveData = ProgressConfig.loadProgress()
@@ -73,7 +59,6 @@ class MainMenuScene extends Phaser.Scene {
         // Place buttons just inside the top of the lower black section.
         // Clamp so buttons always fit above the footer (60px) regardless of screen size.
         const lowerBlackStart = Math.round(LOWER_BLACK_START_Y * scale)
-        const btnW = Math.min(Math.round(width * 0.65), 340)
         const btnH = isMobile ? 44 : 54
         const btnRadius = 10
         const infoSize = isMobile ? '12px' : '14px'
