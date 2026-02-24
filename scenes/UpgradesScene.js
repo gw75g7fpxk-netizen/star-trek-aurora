@@ -61,6 +61,7 @@ class UpgradesScene extends Phaser.Scene {
         resetButton.setInteractive()
         
         resetButton.on('pointerdown', () => {
+            this.sound.play('button-click')
             this.resetUpgrades()
         })
         
@@ -87,6 +88,7 @@ class UpgradesScene extends Phaser.Scene {
         backButton.setInteractive()
         
         backButton.on('pointerdown', () => {
+            this.sound.play('button-click')
             this.scene.start('MainMenuScene')
         })
         
@@ -130,6 +132,7 @@ class UpgradesScene extends Phaser.Scene {
             tab.setInteractive()
             
             tab.on('pointerdown', () => {
+                this.sound.play('button-click')
                 this.switchCategory(categoryKey)
             })
             
@@ -256,6 +259,7 @@ class UpgradesScene extends Phaser.Scene {
                     button.setInteractive()
                     
                     button.on('pointerdown', () => {
+                        this.sound.play('button-click')
                         this.purchaseUpgrade(upgrade.key, cost)
                     })
                     

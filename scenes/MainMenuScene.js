@@ -137,7 +137,10 @@ class MainMenuScene extends Phaser.Scene {
 
         // Interactive zone over the button area
         const zone = this.add.zone(x, y + btnHeight / 2, btnWidth, btnHeight).setInteractive()
-        zone.on('pointerdown', onPress)
+        zone.on('pointerdown', () => {
+            this.sound.play('button-click')
+            onPress()
+        })
         zone.on('pointerover', () => {
             drawBg(0.7)
             text.setScale(1.04)
