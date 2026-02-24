@@ -28,8 +28,10 @@ class GameOverScene extends Phaser.Scene {
         const buttonFontSize = isMobile ? Math.max(18, width * 0.045) : 28;
         
         // LCARS-style title with level info
+        // On mobile, start title higher (20% down) to leave room for all content below
+        const titleY = isMobile ? height * 0.2 : height / 3;
         const levelInfo = ProgressConfig.levelInfo[this.levelNumber];
-        const title = this.add.text(width / 2, height / 3, 'MISSION FAILED', {
+        const title = this.add.text(width / 2, titleY, 'MISSION FAILED', {
             fontSize: `${titleFontSize}px`,
             color: '#FF0000',
             fontFamily: 'Courier New, monospace',
@@ -38,7 +40,7 @@ class GameOverScene extends Phaser.Scene {
         title.setOrigin(0.5);
         
         const subtitleYOffset = isMobile ? 40 : 65;
-        const levelText = this.add.text(width / 2, height / 3 + subtitleYOffset, `Level ${this.levelNumber}: ${levelInfo.name}`, {
+        const levelText = this.add.text(width / 2, titleY + subtitleYOffset, `Level ${this.levelNumber}: ${levelInfo.name}`, {
             fontSize: `${subtitleFontSize}px`,
             color: '#FFFF00',
             fontFamily: 'Courier New, monospace'
@@ -48,8 +50,8 @@ class GameOverScene extends Phaser.Scene {
         // Get high score
         const highScore = this.getHighScore();
         
-        // Stats with LCARS border - responsive panel width
-        const statsY = height / 2;
+        // Stats with LCARS border - responsive panel width and position
+        const statsY = isMobile ? height * 0.38 : height / 2;
         const statsPanel = this.add.graphics();
         statsPanel.lineStyle(3, 0xFF0000, 1);
         const panelWidth = Math.min(440, width * 0.85);
@@ -90,8 +92,8 @@ class GameOverScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
         
-        // Navigation buttons
-        const buttonY = height * 0.75;
+        // Navigation buttons - on mobile, ensure buttons always start below the stats panel
+        const buttonY = isMobile ? Math.max(statsY + panelHeight + 30, height * 0.72) : height * 0.75;
         const buttonSpacing = isMobile ? 50 : 60;
         
         // Restart button
