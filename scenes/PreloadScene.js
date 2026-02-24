@@ -188,6 +188,9 @@ class PreloadScene extends Phaser.Scene {
         // Load Sentinel phaser beam sound effect
         this.load.audio('phaser-beam-sound', 'assets/audio/tng_phaser7_clean.mp3');
         
+        // Load red alert sound effect for dialog
+        this.load.audio('red-alert-sound', 'assets/audio/tng_red_alert2.mp3');
+        
         // Create placeholder graphics as textures for other game objects
         // These will be replaced with actual sprites later
         
