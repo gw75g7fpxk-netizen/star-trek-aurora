@@ -4121,6 +4121,7 @@ class Level1Scene extends Phaser.Scene {
                 // Check if rescue is complete
                 if (progress >= 1.0) {
                     this.completePodRescue(pod);
+                    return; // Pod is destroyed; stop processing this pod
                 }
             } else {
                 // Player moved too far away - reset rescue timer
