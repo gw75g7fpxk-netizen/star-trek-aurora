@@ -2118,7 +2118,7 @@ class Level1Scene extends Phaser.Scene {
         let healthColor;
         if (healthPercent > 0.5) {
             healthColor = 0x00ff00; // Green
-        } else if (healthPercent > 0.25) {
+        } else if (healthPercent > 0.35) {
             healthColor = 0xffff00; // Yellow
         } else {
             healthColor = 0xff0000; // Red
