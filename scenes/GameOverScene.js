@@ -28,8 +28,8 @@ class GameOverScene extends Phaser.Scene {
         const buttonFontSize = isMobile ? Math.max(18, width * 0.045) : 28;
         
         // LCARS-style title with level info
-        // On mobile, start title higher (20% down) to leave room for all content below
-        const titleY = isMobile ? height * 0.2 : height / 3;
+        // On mobile, start title at 10% to leave maximum room for stats and buttons below
+        const titleY = isMobile ? height * 0.1 : height / 3;
         const levelInfo = ProgressConfig.levelInfo[this.levelNumber];
         const title = this.add.text(width / 2, titleY, 'MISSION FAILED', {
             fontSize: `${titleFontSize}px`,
@@ -51,7 +51,7 @@ class GameOverScene extends Phaser.Scene {
         const highScore = this.getHighScore();
         
         // Stats with LCARS border - responsive panel width and position
-        const statsY = isMobile ? height * 0.38 : height / 2;
+        const statsY = isMobile ? height * 0.32 : height / 2;
         const statsPanel = this.add.graphics();
         statsPanel.lineStyle(3, 0xFF0000, 1);
         const panelWidth = Math.min(440, width * 0.85);
@@ -92,9 +92,9 @@ class GameOverScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
         
-        // Navigation buttons - on mobile, ensure buttons always start below the stats panel
-        const buttonY = isMobile ? Math.max(statsY + panelHeight + 30, height * 0.72) : height * 0.75;
-        const buttonSpacing = isMobile ? 50 : 60;
+        // Navigation buttons - on mobile, always place below stats panel within safe area (~76% of height)
+        const buttonY = isMobile ? Math.min(statsY + panelHeight + 25, height * 0.76) : height * 0.75;
+        const buttonSpacing = isMobile ? Math.round(height * 0.07) : 60;
         
         // Restart button
         const restartButton = this.add.text(width / 2, buttonY, '[ RETRY MISSION ]', {
