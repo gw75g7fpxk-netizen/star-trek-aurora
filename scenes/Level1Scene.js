@@ -4761,6 +4761,15 @@ class Level1Scene extends Phaser.Scene {
         }
 
         const message = state.dialogData.sequence[state.currentIndex];
+
+        if (message.audio && this.cache.audio.exists(message.audio)) {
+            try {
+                this.sound.play(message.audio, { volume: 0.8 });
+            } catch (e) {
+                console.warn('Failed to play dialog audio:', e);
+            }
+        }
+
         this.displayCommunicationHUD(message);
     }
 

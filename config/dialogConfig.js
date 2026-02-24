@@ -114,7 +114,7 @@ const DialogConfig = {
                         ship: 'USS Aurora',
                         portrait: 'playerShip',
                         text: 'Red alert! All hands to battle stations. This first contact just went hostile. Shields up, prepare to engage!',
-                        audio: null
+                        audio: 'red-alert-sound'
                     }
                 ]
             },
