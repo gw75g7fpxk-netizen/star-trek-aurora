@@ -136,6 +136,23 @@ class MainMenuScene extends Phaser.Scene {
         this.input.keyboard.once('keydown-SPACE', () => {
             this.scene.start('LevelSelectScene')
         })
+
+        // Fade in buttons top → bottom; the LCARS background and USS Aurora title
+        // stay at full alpha (they are present on the upgrades screen too).
+        const fadeGroups = [
+            [btn1.bg, btn1.text, btn1Info],
+            [btn2.bg, btn2.text, btn2Info]
+        ]
+        fadeGroups.forEach((group, i) => {
+            group.forEach(el => el.setAlpha(0))
+            this.tweens.add({
+                targets: group,
+                alpha: 1,
+                duration: 500,
+                delay: i * 200,
+                ease: 'Linear'
+            })
+        })
     }
 
     createLcarsButton(x, y, btnWidth, btnHeight, radius, fontFamily, label, fillColor, textColor, onPress) {

@@ -39,8 +39,8 @@ class UpgradesScene extends Phaser.Scene {
         const titleSize = upperBlackBottom > 200 ? '60px' : upperBlackBottom > 120 ? '40px' : '28px'
         const titleY = Math.round(upperBlackBottom * 0.50)
 
-        // USS Aurora – interactive back button in the same position as MainMenuScene title
-        this.ussAurora = this.add.text(btnLeft, titleY, 'USS Aurora', {
+        // ← MAIN MENU – interactive back button in the same position as MainMenuScene title
+        this.ussAurora = this.add.text(btnLeft, titleY, '← MAIN MENU', {
             fontSize: titleSize,
             color: '#FF9900',
             fontFamily: lcarsFont,
@@ -72,9 +72,13 @@ class UpgradesScene extends Phaser.Scene {
         const tabGap    = isMobile ? 6  : 8
         const tabY      = lowerBlackStart + topPad
 
-        // Three category tabs side-by-side using LCARS button style
-        const sidePad = 20
-        const tabW = Math.min(Math.floor((width - 2 * sidePad - 2 * tabGap) / 3), 175)
+        // Three category tabs side-by-side using LCARS button style.
+        // lcarsChromePad keeps all content within the visible black area on every screen
+        // size: the LCARS left panel is ~12.9% (165 px at 1280 px) of the image width.
+        const lcarsChromePad = Math.round(165 * width / 1280) + 8
+        const maxContentWidth = width - 2 * lcarsChromePad
+        this.lcarsChromePad = lcarsChromePad
+        const tabW = Math.min(Math.floor((maxContentWidth - 2 * tabGap) / 3), 175)
         const totalTabsWidth = 3 * tabW + 2 * tabGap
         const tabsStartX = Math.round(width / 2 - totalTabsWidth / 2)
 
@@ -95,25 +99,39 @@ class UpgradesScene extends Phaser.Scene {
         })
 
         // ── Upgrade list ──
+        // Compute spacing/boxH dynamically so items + reset button always fit
+        // within the screen, even at 16:9 resolutions like 1280×720.
         const listGap = isMobile ? 8 : 10
         const listStartY = tabY + tabH + listGap
         this.upgradeListY = listStartY
         this.isMobile = isMobile
-        this.createUpgradeList(isMobile)
 
-        // ── Reset button – positioned just below the last upgrade item,
-        //    clamped so it is always within the visible screen ──
-        const spacing = isMobile ? 70 : 56
-        const boxH    = isMobile ? 64 : 50
-        const maxItems = 3
-        const resetGap = isMobile ? 10 : 12
-        const resetH   = isMobile ? 32 : 38
-        const FOOTER_PAD = isMobile ? 10 : 14
-        const resetBtnW = Math.min(Math.round(width * 0.55), 280)
-        const resetY = Math.min(
-            listStartY + (maxItems - 1) * spacing + boxH + resetGap,
-            height - FOOTER_PAD - resetH
-        )
+        const ITEM_COUNT   = 3
+        const normalSpacing = isMobile ? 70 : 56
+        const normalBoxH    = isMobile ? 60 : 50
+        const normalResetH  = isMobile ? 32 : 34
+        const normalResetGap = isMobile ? 8 : 10
+        const normalFooterPad = isMobile ? 10 : 14
+        const normalTotalNeeded = (ITEM_COUNT - 1) * normalSpacing + normalBoxH
+            + normalResetGap + normalResetH + normalFooterPad
+
+        // Switch to compact mode (desktop only) when the screen is too short
+        // to fit 3 items + reset button without overlap.
+        const compact = !isMobile && (height - listStartY) < (normalTotalNeeded - 10)
+        this.compact  = compact
+        this.spacing  = compact ? 44 : normalSpacing
+        this.boxH     = compact ? 36 : normalBoxH
+
+        const resetH      = compact ? 30 : normalResetH
+        const resetGap    = compact ? 6  : normalResetGap
+        const footerPad   = compact ? 4  : normalFooterPad
+        const resetBtnW   = Math.min(Math.round(width * 0.55), 280)
+
+        // Position reset button so it starts after the last item and fits on screen.
+        const naturalResetY = listStartY + (ITEM_COUNT - 1) * this.spacing + this.boxH + resetGap
+        const resetY = Math.min(naturalResetY, height - footerPad - resetH)
+
+        this.createUpgradeList(isMobile)
 
         this.resetButton = this.createLcarsButton(
             width / 2, resetY, resetBtnW, resetH, 8, lcarsFont,
@@ -213,12 +231,17 @@ class UpgradesScene extends Phaser.Scene {
         const lcarsFont = 'Antonio, Oswald, Arial Narrow, sans-serif'
 
         const startY   = this.upgradeListY
-        const spacing  = isMobile ? 70 : 56
-        const boxH     = isMobile ? 64 : 50
-        const boxWidth = isMobile ? width - 40 : width - 80
-        const nameSize = isMobile ? '14px' : '15px'
-        const levelSize = isMobile ? '12px' : '13px'
-        const btnSize  = isMobile ? '12px' : '13px'
+        const spacing  = this.spacing
+        const boxH     = this.boxH
+        const compact  = this.compact
+        const boxWidth = width - 2 * this.lcarsChromePad
+        const nameSize  = compact ? '13px' : (isMobile ? '14px' : '15px')
+        const levelSize = compact ? '11px' : (isMobile ? '12px' : '13px')
+        const btnSize   = compact ? '11px' : (isMobile ? '12px' : '13px')
+        // Text row positions within each box (proportional to boxH)
+        const nameRelY  = Math.round(boxH * 0.18)
+        const levelRelY = Math.round(boxH * 0.48)
+        const btnRelY   = Math.round(boxH * 0.76)
 
         upgrades.forEach((upgrade, index) => {
             const y = startY + index * spacing
@@ -237,7 +260,7 @@ class UpgradesScene extends Phaser.Scene {
             this.upgradeElements.push(boxBg)
 
             // Upgrade name
-            const nameText = this.add.text(width / 2, y + (isMobile ? 10 : 8), upgrade.name, {
+            const nameText = this.add.text(width / 2, y + nameRelY, upgrade.name, {
                 fontSize: nameSize,
                 color: '#FFFFFF',
                 fontFamily: lcarsFont,
@@ -246,7 +269,7 @@ class UpgradesScene extends Phaser.Scene {
             this.upgradeElements.push(nameText)
 
             // Level indicator
-            const levelText = this.add.text(width / 2, y + (isMobile ? 27 : 23), `Level: ${currentLevel} / ${maxLevel}`, {
+            const levelText = this.add.text(width / 2, y + levelRelY, `Level: ${currentLevel} / ${maxLevel}`, {
                 fontSize: levelSize,
                 color: '#66CCFF',
                 fontFamily: lcarsFont
@@ -254,7 +277,7 @@ class UpgradesScene extends Phaser.Scene {
             this.upgradeElements.push(levelText)
 
             // Purchase or max-level label
-            const btnY = y + (isMobile ? 44 : 37)
+            const btnY = y + btnRelY
             if (!isMaxed) {
                 const btnLabel = `[ UPGRADE - ${cost} pts ]`
                 const btnColor = canAfford ? '#FF9900' : '#555577'
