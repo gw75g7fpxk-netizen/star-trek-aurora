@@ -90,6 +90,8 @@ class MainMenuScene extends Phaser.Scene {
             width / 2, btn2Y, btnW, btnH, btnRadius, lcarsFont,
             'SHIP UPGRADES', 0x9999CC, '#000000',
             () => {
+                // Disable zones for the duration of the animation; the scene
+                // is destroyed by scene.start so they never need re-enabling.
                 btn1.zone.disableInteractive()
                 btn2.zone.disableInteractive()
                 // Fade out top button first

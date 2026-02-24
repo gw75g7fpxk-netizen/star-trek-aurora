@@ -256,7 +256,7 @@ class UpgradesScene extends Phaser.Scene {
             // Purchase or max-level label
             const btnY = y + (isMobile ? 44 : 37)
             if (!isMaxed) {
-                const btnLabel = `[ UPGRADE  –  ${cost} pts ]`
+                const btnLabel = `[ UPGRADE - ${cost} pts ]`
                 const btnColor = canAfford ? '#FF9900' : '#555577'
                 const btn = this.add.text(width / 2, btnY, btnLabel, {
                     fontSize: btnSize,
@@ -289,7 +289,8 @@ class UpgradesScene extends Phaser.Scene {
     // ── Helpers to build ordered fade groups (top → bottom) ──
 
     buildUpgradeItemGroups() {
-        // Each upgrade item contributes exactly 4 elements: boxBg, name, level, btn/max
+        // Each upgrade item pushes exactly 4 elements in createUpgradeList:
+        // boxBg, nameText, levelText, purchaseBtn/maxTxt
         const ELEMS_PER_ITEM = 4
         const groups = []
         for (let i = 0; i < this.upgradeElements.length; i += ELEMS_PER_ITEM) {
