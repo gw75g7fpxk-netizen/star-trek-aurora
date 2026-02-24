@@ -1,4 +1,4 @@
-// Upgrades Scene - Ship upgrade system
+// Upgrades Scene - Ship upgrade system with LCARS theme
 class UpgradesScene extends Phaser.Scene {
     constructor() {
         super({ key: 'UpgradesScene' })
@@ -8,186 +8,218 @@ class UpgradesScene extends Phaser.Scene {
         const width = this.cameras.main.width
         const height = this.cameras.main.height
         const isMobile = width < 600 || height < 600
-        
+
         console.log('UpgradesScene: Opening upgrades...')
-        
-        // Load progress data
+
         this.saveData = ProgressConfig.loadProgress()
-        this.selectedCategory = 'offensive' // Default category
-        
-        // Background
-        this.createStarfield()
-        
-        // Title
-        const titleSize = isMobile ? '24px' : '32px'
-        const titleY = isMobile ? 30 : 40
-        const title = this.add.text(width / 2, titleY, 'SHIP UPGRADES', {
+        this.selectedCategory = 'offensive'
+        this.upgradeElements = []
+        this.isNavigatingBack = false
+
+        // ── LCARS background – same nineslice config as MainMenuScene ──
+        const IMAGE_WIDTH = 1280
+        const IMAGE_HEIGHT = 876
+        const UPPER_BLACK_BOTTOM_Y = 275  // texture y of upper black section bottom
+        const LOWER_BLACK_START_Y = 490   // texture y where lower black area begins
+        const scale = width / IMAGE_WIDTH
+        const neededHeight = Math.max(IMAGE_HEIGHT, Math.ceil(height / scale))
+        this.add.nineslice(
+            0, 0,
+            'lcars-menu-background', null,
+            IMAGE_WIDTH, neededHeight,
+            0, 0, IMAGE_HEIGHT - 1, 0
+        ).setOrigin(0, 0).setScale(scale)
+
+        const lcarsFont = 'Antonio, Oswald, Arial Narrow, sans-serif'
+        const btnW = Math.min(Math.round(width * 0.65), 340)
+        const btnLeft = Math.round(width / 2 - btnW / 2)
+
+        // ── Upper black section ──
+        const upperBlackBottom = Math.round(UPPER_BLACK_BOTTOM_Y * scale)
+        const titleSize = upperBlackBottom > 200 ? '60px' : upperBlackBottom > 120 ? '40px' : '28px'
+        const titleY = Math.round(upperBlackBottom * 0.50)
+
+        // USS Aurora – interactive back button in the same position as MainMenuScene title
+        this.ussAurora = this.add.text(btnLeft, titleY, 'USS Aurora', {
             fontSize: titleSize,
             color: '#FF9900',
-            fontFamily: 'Courier New, monospace',
+            fontFamily: lcarsFont,
             fontStyle: 'bold'
+        }).setOrigin(0, 0.5)
+        this.ussAurora.setInteractive({ useHandCursor: true })
+        this.ussAurora.on('pointerover', () => this.ussAurora.setStyle({ color: '#FFCC44' }))
+        this.ussAurora.on('pointerout',  () => this.ussAurora.setStyle({ color: '#FF9900' }))
+        this.ussAurora.on('pointerdown', () => {
+            this.sound.play('button-click')
+            this.navigateBack()
         })
-        title.setOrigin(0.5)
-        
-        // Points display (will be updated)
-        const pointsSize = isMobile ? '18px' : '22px'
-        const pointsY = isMobile ? 60 : 75
-        this.pointsText = this.add.text(width / 2, pointsY, `Credits: ${this.saveData.upgradePoints}`, {
-            fontSize: pointsSize,
-            color: '#FFFF00',
-            fontFamily: 'Courier New, monospace',
-            fontStyle: 'bold'
+
+        // Credits display – tucked in the upper area below USS Aurora
+        const creditsY = Math.round(titleY + (upperBlackBottom - titleY) * 0.60)
+        const creditsSize = isMobile ? '13px' : '15px'
+        this.creditsText = this.add.text(btnLeft, creditsY,
+            `${this.saveData.upgradePoints} upgrade points available`, {
+                fontSize: creditsSize,
+                color: '#FFAA44',
+                fontFamily: lcarsFont
+            }).setOrigin(0, 0.5)
+
+        // ── Lower black section ──
+        const lowerBlackStart = Math.round(LOWER_BLACK_START_Y * scale)
+        const topPad    = isMobile ? 12 : 20
+        const tabH      = isMobile ? 32 : 38
+        const tabRadius = 8
+        const tabGap    = isMobile ? 6  : 8
+        const tabY      = lowerBlackStart + topPad
+
+        // Three category tabs side-by-side using LCARS button style
+        const sidePad = 20
+        const tabW = Math.min(Math.floor((width - 2 * sidePad - 2 * tabGap) / 3), 175)
+        const totalTabsWidth = 3 * tabW + 2 * tabGap
+        const tabsStartX = Math.round(width / 2 - totalTabsWidth / 2)
+
+        const TAB_CONFIGS = [
+            { key: 'offensive', label: 'OFFENSIVE', activeColor: 0xFF6600 },
+            { key: 'defensive', label: 'DEFENSIVE', activeColor: 0x5577CC },
+            { key: 'movement',  label: 'MOVEMENT',  activeColor: 0xBB9900 }
+        ]
+
+        this.categoryButtons = {}
+        TAB_CONFIGS.forEach((cfg, i) => {
+            const tx = tabsStartX + i * (tabW + tabGap) + tabW / 2
+            const btn = this.createCategoryTab(
+                tx, tabY, tabW, tabH, tabRadius, lcarsFont,
+                cfg.label, cfg.key, cfg.activeColor, isMobile
+            )
+            this.categoryButtons[cfg.key] = btn
         })
-        this.pointsText.setOrigin(0.5)
-        
-        // Category tabs
-        this.createCategoryTabs(isMobile)
-        
-        // Upgrade list container
-        const listStartY = isMobile ? 140 : 160
+
+        // ── Upgrade list ──
+        const listGap = isMobile ? 8 : 10
+        const listStartY = tabY + tabH + listGap
         this.upgradeListY = listStartY
+        this.isMobile = isMobile
         this.createUpgradeList(isMobile)
-        
-        // Reset button
-        const resetButtonY = isMobile ? height - 160 : height - 90
-        const resetButtonSize = isMobile ? '16px' : '18px'
-        const resetButton = this.add.text(width / 2, resetButtonY, '[ RESET ALL UPGRADES ]', {
-            fontSize: resetButtonSize,
-            color: '#FF6600',
-            fontFamily: 'Courier New, monospace',
-            fontStyle: 'bold'
-        })
-        resetButton.setOrigin(0.5)
-        resetButton.setInteractive()
-        
-        resetButton.on('pointerdown', () => {
-            this.sound.play('button-click')
-            this.resetUpgrades()
-        })
-        
-        resetButton.on('pointerover', () => {
-            resetButton.setColor('#FF9900')
-            resetButton.setScale(1.05)
-        })
-        
-        resetButton.on('pointerout', () => {
-            resetButton.setColor('#FF6600')
-            resetButton.setScale(1.0)
-        })
-        
-        // Back button
-        const backButtonY = isMobile ? height - 110 : height - 50
-        const backButtonSize = isMobile ? '18px' : '20px'
-        const backButton = this.add.text(width / 2, backButtonY, '[ BACK TO MENU ]', {
-            fontSize: backButtonSize,
-            color: '#00FF00',
-            fontFamily: 'Courier New, monospace',
-            fontStyle: 'bold'
-        })
-        backButton.setOrigin(0.5)
-        backButton.setInteractive()
-        
-        backButton.on('pointerdown', () => {
-            this.sound.play('button-click')
-            this.scene.start('MainMenuScene')
-        })
-        
-        backButton.on('pointerover', () => {
-            backButton.setColor('#00FFFF')
-            backButton.setScale(1.05)
-        })
-        
-        backButton.on('pointerout', () => {
-            backButton.setColor('#00FF00')
-            backButton.setScale(1.0)
-        })
-        
-        // Keyboard shortcuts
-        this.input.keyboard.once('keydown-ESC', () => {
-            this.scene.start('MainMenuScene')
-        })
+
+        // ── Reset button – positioned just below the last upgrade item,
+        //    clamped so it is always within the visible screen ──
+        const spacing = isMobile ? 70 : 56
+        const boxH    = isMobile ? 64 : 50
+        const maxItems = 3
+        const resetGap = isMobile ? 10 : 12
+        const resetH   = isMobile ? 32 : 38
+        const FOOTER_PAD = isMobile ? 10 : 14
+        const resetBtnW = Math.min(Math.round(width * 0.55), 280)
+        const resetY = Math.min(
+            listStartY + (maxItems - 1) * spacing + boxH + resetGap,
+            height - FOOTER_PAD - resetH
+        )
+
+        this.resetButton = this.createLcarsButton(
+            width / 2, resetY, resetBtnW, resetH, 8, lcarsFont,
+            'RESET ALL UPGRADES', 0xCC3300, '#FFFFFF',
+            () => { this.resetUpgrades() }
+        )
+
+        // Keyboard shortcut
+        this.input.keyboard.once('keydown-ESC', () => { this.navigateBack() })
+
+        // ── Fade-in animation (top → bottom stagger) ──
+        this.performFadeIn()
     }
-    
-    createCategoryTabs(isMobile) {
-        const width = this.cameras.main.width
-        const tabY = isMobile ? 95 : 115
-        const tabSize = isMobile ? '14px' : '16px'
-        const spacing = isMobile ? 120 : 160
-        
-        this.categoryTabs = {}
-        const categories = ['offensive', 'defensive', 'movement']
-        const startX = width / 2 - (categories.length - 1) * spacing / 2
-        
-        categories.forEach((categoryKey, index) => {
-            const category = UpgradesConfig.categories[categoryKey]
-            const x = startX + index * spacing
-            
-            const tab = this.add.text(x, tabY, category.name, {
-                fontSize: tabSize,
-                color: categoryKey === this.selectedCategory ? category.color : '#888888',
-                fontFamily: 'Courier New, monospace',
-                fontStyle: 'bold'
-            })
-            tab.setOrigin(0.5)
-            tab.setInteractive()
-            
-            tab.on('pointerdown', () => {
-                this.sound.play('button-click')
-                this.switchCategory(categoryKey)
-            })
-            
-            tab.on('pointerover', () => {
-                if (categoryKey !== this.selectedCategory) {
-                    tab.setColor('#CCCCCC')
-                }
-            })
-            
-            tab.on('pointerout', () => {
-                if (categoryKey !== this.selectedCategory) {
-                    tab.setColor('#888888')
-                }
-            })
-            
-            this.categoryTabs[categoryKey] = tab
-        })
+
+    // ── LCARS button (rounded rectangle) – same helper as MainMenuScene ──
+    createLcarsButton(x, y, btnWidth, btnHeight, radius, fontFamily, label, fillColor, textColor, onPress) {
+        const bg = this.add.graphics()
+        const drawBg = (alpha) => {
+            bg.clear()
+            bg.fillStyle(fillColor, alpha)
+            bg.fillRoundedRect(x - btnWidth / 2, y, btnWidth, btnHeight, radius)
+        }
+        drawBg(1)
+
+        const btnFontSize = btnHeight > 42 ? '18px' : '14px'
+        const text = this.add.text(x, y + btnHeight / 2, label, {
+            fontSize: btnFontSize,
+            color: textColor,
+            fontFamily: fontFamily,
+            fontStyle: 'bold'
+        }).setOrigin(0.5)
+
+        const zone = this.add.zone(x, y + btnHeight / 2, btnWidth, btnHeight).setInteractive()
+        zone.on('pointerdown', () => { this.sound.play('button-click'); onPress() })
+        zone.on('pointerover', () => { drawBg(0.7); text.setScale(1.04) })
+        zone.on('pointerout',  () => { drawBg(1);   text.setScale(1.0)  })
+
+        return { bg, text, zone }
     }
-    
-    switchCategory(categoryKey) {
-        if (this.selectedCategory === categoryKey) return
-        
-        this.selectedCategory = categoryKey
-        
-        // Update tab colors
-        Object.keys(this.categoryTabs).forEach(key => {
-            const category = UpgradesConfig.categories[key]
-            const tab = this.categoryTabs[key]
-            tab.setColor(key === categoryKey ? category.color : '#888888')
+
+    // ── Category tab – like a LCARS button but tracks active/inactive fill ──
+    createCategoryTab(x, y, w, h, radius, fontFamily, label, key, activeColor, isMobile) {
+        const INACTIVE_COLOR = 0x2A2A44
+        const isActive = () => key === this.selectedCategory
+
+        const bg = this.add.graphics()
+        const drawBg = (color) => {
+            bg.clear()
+            bg.fillStyle(color, 1)
+            bg.fillRoundedRect(x - w / 2, y, w, h, radius)
+        }
+        drawBg(isActive() ? activeColor : INACTIVE_COLOR)
+
+        const tabFontSize = isMobile ? '13px' : '15px'
+        const text = this.add.text(x, y + h / 2, label, {
+            fontSize: tabFontSize,
+            color: isActive() ? '#000000' : '#7777AA',
+            fontFamily: fontFamily,
+            fontStyle: 'bold'
+        }).setOrigin(0.5)
+
+        const zone = this.add.zone(x, y + h / 2, w, h).setInteractive()
+        zone.on('pointerdown', () => { this.sound.play('button-click'); this.switchCategory(key) })
+        zone.on('pointerover', () => { if (!isActive()) drawBg(0x444466) })
+        zone.on('pointerout',  () => { drawBg(isActive() ? activeColor : INACTIVE_COLOR) })
+
+        return { bg, text, zone, drawBg, activeColor, INACTIVE_COLOR }
+    }
+
+    switchCategory(key) {
+        if (this.selectedCategory === key) return
+        this.selectedCategory = key
+
+        // Update tab visuals
+        Object.keys(this.categoryButtons).forEach(k => {
+            const btn = this.categoryButtons[k]
+            const active = k === key
+            btn.drawBg(active ? btn.activeColor : btn.INACTIVE_COLOR)
+            btn.text.setStyle({ color: active ? '#000000' : '#7777AA' })
         })
-        
-        // Recreate upgrade list
+
         this.clearUpgradeList()
-        this.createUpgradeList(this.cameras.main.width < 600 || this.cameras.main.height < 600)
+        this.createUpgradeList(this.isMobile)
     }
-    
+
     clearUpgradeList() {
         if (this.upgradeElements) {
-            this.upgradeElements.forEach(element => element.destroy())
+            this.upgradeElements.forEach(el => el.destroy())
         }
         this.upgradeElements = []
     }
-    
+
     createUpgradeList(isMobile) {
         this.upgradeElements = []
         const width = this.cameras.main.width
         const upgrades = UpgradesConfig.getUpgradesByCategory(this.selectedCategory)
-        
-        const startY = this.upgradeListY
-        const spacing = isMobile ? 90 : 110
-        const nameSize = isMobile ? '14px' : '16px'
-        const descSize = isMobile ? '11px' : '12px'
-        const levelSize = isMobile ? '12px' : '14px'
-        const buttonSize = isMobile ? '12px' : '14px'
-        
+        const lcarsFont = 'Antonio, Oswald, Arial Narrow, sans-serif'
+
+        const startY   = this.upgradeListY
+        const spacing  = isMobile ? 70 : 56
+        const boxH     = isMobile ? 64 : 50
+        const boxWidth = isMobile ? width - 40 : width - 80
+        const nameSize = isMobile ? '14px' : '15px'
+        const levelSize = isMobile ? '12px' : '13px'
+        const btnSize  = isMobile ? '12px' : '13px'
+
         upgrades.forEach((upgrade, index) => {
             const y = startY + index * spacing
             const currentLevel = this.saveData.upgrades[upgrade.key] || 0
@@ -195,167 +227,158 @@ class UpgradesScene extends Phaser.Scene {
             const cost = UpgradesConfig.getCostToUpgrade(upgrade.key, currentLevel)
             const canAfford = cost !== null && this.saveData.upgradePoints >= cost
             const isMaxed = currentLevel >= maxLevel
-            
-            // Background box for this upgrade option
-            const boxPadding = isMobile ? 8 : 10
-            const boxWidth = isMobile ? width - 40 : width - 160
-            const boxHeight = isMobile ? 75 : 80
-            const boxX = width / 2
-            const boxY = y + (isMobile ? 24 : 27)
-            
-            const background = this.add.rectangle(
-                boxX,
-                boxY,
-                boxWidth,
-                boxHeight,
-                0x000000,
-                0.7
-            )
-            this.upgradeElements.push(background)
-            
+
+            // Box background with subtle LCARS accent border
+            const boxBg = this.add.graphics()
+            boxBg.fillStyle(0x080818, 0.88)
+            boxBg.fillRoundedRect(width / 2 - boxWidth / 2, y, boxWidth, boxH, 6)
+            boxBg.lineStyle(1, 0xFF9900, 0.35)
+            boxBg.strokeRoundedRect(width / 2 - boxWidth / 2, y, boxWidth, boxH, 6)
+            this.upgradeElements.push(boxBg)
+
             // Upgrade name
-            const nameText = this.add.text(width / 2, y, upgrade.name, {
+            const nameText = this.add.text(width / 2, y + (isMobile ? 10 : 8), upgrade.name, {
                 fontSize: nameSize,
                 color: '#FFFFFF',
-                fontFamily: 'Courier New, monospace',
+                fontFamily: lcarsFont,
                 fontStyle: 'bold'
-            })
-            nameText.setOrigin(0.5)
+            }).setOrigin(0.5)
             this.upgradeElements.push(nameText)
-            
-            // Description
-            const descText = this.add.text(width / 2, y + (isMobile ? 16 : 18), upgrade.description, {
-                fontSize: descSize,
-                color: '#AAAAAA',
-                fontFamily: 'Courier New, monospace'
-            })
-            descText.setOrigin(0.5)
-            this.upgradeElements.push(descText)
-            
+
             // Level indicator
-            const levelText = this.add.text(width / 2, y + (isMobile ? 32 : 36), `Level: ${currentLevel} / ${maxLevel}`, {
+            const levelText = this.add.text(width / 2, y + (isMobile ? 27 : 23), `Level: ${currentLevel} / ${maxLevel}`, {
                 fontSize: levelSize,
-                color: '#00FFFF',
-                fontFamily: 'Courier New, monospace'
-            })
-            levelText.setOrigin(0.5)
+                color: '#66CCFF',
+                fontFamily: lcarsFont
+            }).setOrigin(0.5)
             this.upgradeElements.push(levelText)
-            
-            // Upgrade button
+
+            // Purchase or max-level label
+            const btnY = y + (isMobile ? 44 : 37)
             if (!isMaxed) {
-                const buttonY = y + (isMobile ? 48 : 54)
-                const buttonText = `[ UPGRADE - ${cost} Credits ]`
-                const buttonColor = canAfford ? '#00FF00' : '#666666'
-                
-                const button = this.add.text(width / 2, buttonY, buttonText, {
-                    fontSize: buttonSize,
-                    color: buttonColor,
-                    fontFamily: 'Courier New, monospace',
+                const btnLabel = `[ UPGRADE  –  ${cost} pts ]`
+                const btnColor = canAfford ? '#FF9900' : '#555577'
+                const btn = this.add.text(width / 2, btnY, btnLabel, {
+                    fontSize: btnSize,
+                    color: btnColor,
+                    fontFamily: lcarsFont,
                     fontStyle: 'bold'
-                })
-                button.setOrigin(0.5)
-                
+                }).setOrigin(0.5)
                 if (canAfford) {
-                    button.setInteractive()
-                    
-                    button.on('pointerdown', () => {
+                    btn.setInteractive({ useHandCursor: true })
+                    btn.on('pointerdown', () => {
                         this.sound.play('button-click')
                         this.purchaseUpgrade(upgrade.key, cost)
                     })
-                    
-                    button.on('pointerover', () => {
-                        button.setColor('#00FFFF')
-                        button.setScale(1.05)
-                    })
-                    
-                    button.on('pointerout', () => {
-                        button.setColor('#00FF00')
-                        button.setScale(1.0)
-                    })
+                    btn.on('pointerover', () => { btn.setStyle({ color: '#FFCC44' }); btn.setScale(1.04) })
+                    btn.on('pointerout',  () => { btn.setStyle({ color: '#FF9900' }); btn.setScale(1) })
                 }
-                
-                this.upgradeElements.push(button)
+                this.upgradeElements.push(btn)
             } else {
-                // Max level text
-                const maxText = this.add.text(width / 2, y + (isMobile ? 48 : 54), '[ MAX LEVEL ]', {
-                    fontSize: buttonSize,
+                const maxTxt = this.add.text(width / 2, btnY, '[ MAX LEVEL ]', {
+                    fontSize: btnSize,
                     color: '#FFD700',
-                    fontFamily: 'Courier New, monospace',
+                    fontFamily: lcarsFont,
                     fontStyle: 'bold'
-                })
-                maxText.setOrigin(0.5)
-                this.upgradeElements.push(maxText)
+                }).setOrigin(0.5)
+                this.upgradeElements.push(maxTxt)
             }
         })
     }
-    
+
+    // ── Helpers to build ordered fade groups (top → bottom) ──
+
+    buildUpgradeItemGroups() {
+        // Each upgrade item contributes exactly 4 elements: boxBg, name, level, btn/max
+        const ELEMS_PER_ITEM = 4
+        const groups = []
+        for (let i = 0; i < this.upgradeElements.length; i += ELEMS_PER_ITEM) {
+            groups.push(this.upgradeElements.slice(i, i + ELEMS_PER_ITEM))
+        }
+        return groups
+    }
+
+    buildCurrentFadeGroups() {
+        return [
+            [this.ussAurora, this.creditsText],
+            ...Object.values(this.categoryButtons).map(btn => [btn.bg, btn.text]),
+            ...this.buildUpgradeItemGroups(),
+            [this.resetButton.bg, this.resetButton.text]
+        ]
+    }
+
+    performFadeIn() {
+        const groups = this.buildCurrentFadeGroups()
+        const GAP_MS = 150
+        const DUR_MS = 400
+        groups.forEach((group, i) => {
+            group.forEach(el => el.setAlpha(0))
+            this.tweens.add({
+                targets: group,
+                alpha: 1,
+                duration: DUR_MS,
+                delay: i * GAP_MS,
+                ease: 'Linear'
+            })
+        })
+    }
+
+    navigateBack() {
+        if (this.isNavigatingBack) return
+        this.isNavigatingBack = true
+
+        // Disable all interactive zones
+        this.ussAurora.disableInteractive()
+        Object.values(this.categoryButtons).forEach(btn => btn.zone.disableInteractive())
+        if (this.resetButton) this.resetButton.zone.disableInteractive()
+
+        const groups = this.buildCurrentFadeGroups()
+        const GAP_MS = 100
+        const DUR_MS = 300
+        groups.forEach((group, i) => {
+            this.tweens.add({
+                targets: group,
+                alpha: 0,
+                duration: DUR_MS,
+                delay: i * GAP_MS,
+                ease: 'Linear'
+            })
+        })
+
+        const totalDelay = (groups.length - 1) * GAP_MS + DUR_MS
+        this.time.delayedCall(totalDelay, () => {
+            this.scene.start('MainMenuScene')
+        })
+    }
+
     purchaseUpgrade(upgradeKey, cost) {
         const currentLevel = this.saveData.upgrades[upgradeKey] || 0
-        
-        // Deduct points and upgrade
         this.saveData.upgrades[upgradeKey] = currentLevel + 1
         this.saveData.upgradePoints -= cost
-        
-        // Save progress
         ProgressConfig.saveProgress(this.saveData)
-        
-        // Update display
-        this.pointsText.setText(`Credits: ${this.saveData.upgradePoints}`)
-        
-        // Recreate upgrade list to show new state
+        this.creditsText.setText(`${this.saveData.upgradePoints} upgrade points available`)
         this.clearUpgradeList()
-        this.createUpgradeList(this.cameras.main.width < 600 || this.cameras.main.height < 600)
-        
+        this.createUpgradeList(this.isMobile)
         console.log(`Purchased ${upgradeKey} level ${currentLevel + 1}`)
     }
-    
+
     resetUpgrades() {
-        // Calculate total points to refund
         let totalRefund = 0
         Object.keys(this.saveData.upgrades).forEach(upgradeKey => {
             const currentLevel = this.saveData.upgrades[upgradeKey]
             if (currentLevel > 0) {
                 const upgrade = UpgradesConfig.upgrades[upgradeKey]
-                if (upgrade) {
-                    // Refund cost per level * number of levels
-                    totalRefund += upgrade.costPerLevel * currentLevel
-                }
+                if (upgrade) totalRefund += upgrade.costPerLevel * currentLevel
             }
         })
-        
-        // Reset all upgrades to level 0
         Object.keys(this.saveData.upgrades).forEach(upgradeKey => {
             this.saveData.upgrades[upgradeKey] = 0
         })
-        
-        // Add refunded points back
         this.saveData.upgradePoints += totalRefund
-        
-        // Save progress
         ProgressConfig.saveProgress(this.saveData)
-        
-        // Update display
-        this.pointsText.setText(`Credits: ${this.saveData.upgradePoints}`)
-        
-        // Recreate upgrade list to show new state
+        this.creditsText.setText(`${this.saveData.upgradePoints} upgrade points available`)
         this.clearUpgradeList()
-        this.createUpgradeList(this.cameras.main.width < 600 || this.cameras.main.height < 600)
-        
+        this.createUpgradeList(this.isMobile)
         console.log(`All upgrades reset. Refunded ${totalRefund} credits.`)
-    }
-    
-    createStarfield() {
-        const width = this.cameras.main.width
-        const height = this.cameras.main.height
-        
-        // Create starfield background
-        for (let i = 0; i < 100; i++) {
-            const x = Phaser.Math.Between(0, width)
-            const y = Phaser.Math.Between(0, height)
-            const size = Phaser.Math.Between(1, 2)
-            const alpha = Phaser.Math.FloatBetween(0.3, 0.7)
-            
-            this.add.circle(x, y, size, 0xFFFFFF, alpha)
-        }
     }
 }
