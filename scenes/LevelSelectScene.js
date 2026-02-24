@@ -161,6 +161,7 @@ class LevelSelectScene extends Phaser.Scene {
                 node.setInteractive({ useHandCursor: true })
                 
                 node.on('pointerdown', () => {
+                    this.sound.play('button-click')
                     this.selectLevel(i)
                 })
                 
@@ -280,6 +281,7 @@ class LevelSelectScene extends Phaser.Scene {
         this.playButton.setInteractive()
         
         this.playButton.on('pointerdown', () => {
+            this.sound.play('button-click')
             this.launchLevel()
         })
         
@@ -314,6 +316,7 @@ class LevelSelectScene extends Phaser.Scene {
         backButton.setInteractive()
         
         backButton.on('pointerdown', () => {
+            this.sound.play('button-click')
             this.scene.start('MainMenuScene')
         })
         

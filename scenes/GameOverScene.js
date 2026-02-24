@@ -107,6 +107,7 @@ class GameOverScene extends Phaser.Scene {
         restartButton.setInteractive();
         
         restartButton.on('pointerdown', () => {
+            this.sound.play('button-click');
             this.scene.start('Level1Scene', { levelNumber: this.levelNumber });
         });
         
@@ -130,6 +131,7 @@ class GameOverScene extends Phaser.Scene {
         menuButton.setInteractive();
         
         menuButton.on('pointerdown', () => {
+            this.sound.play('button-click');
             this.scene.start('MainMenuScene');
         });
         

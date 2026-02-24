@@ -130,6 +130,7 @@ class VictoryScene extends Phaser.Scene {
         playButton.setInteractive();
         
         playButton.on('pointerdown', () => {
+            this.sound.play('button-click');
             this.scene.start('Level1Scene', { levelNumber: this.levelNumber });
         });
         
@@ -155,6 +156,7 @@ class VictoryScene extends Phaser.Scene {
             nextButton.setInteractive();
             
             nextButton.on('pointerdown', () => {
+                this.sound.play('button-click');
                 this.scene.start('Level1Scene', { levelNumber: this.levelNumber + 1 });
             });
             
@@ -179,6 +181,7 @@ class VictoryScene extends Phaser.Scene {
         menuButton.setInteractive();
         
         menuButton.on('pointerdown', () => {
+            this.sound.play('button-click');
             this.scene.start('MainMenuScene');
         });
         

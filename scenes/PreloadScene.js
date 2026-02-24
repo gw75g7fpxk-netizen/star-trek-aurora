@@ -194,6 +194,9 @@ class PreloadScene extends Phaser.Scene {
         // Load red alert sound effect for dialog
         this.load.audio('red-alert-sound', 'assets/audio/tng_red_alert2.mp3');
         
+        // Load LCARS button click sound
+        this.load.audio('button-click', 'assets/audio/keyok3.mp3');
+        
         // Create placeholder graphics as textures for other game objects
         // These will be replaced with actual sprites later
         
