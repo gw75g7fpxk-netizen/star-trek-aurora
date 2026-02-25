@@ -104,27 +104,36 @@ class LevelSelectScene extends Phaser.Scene {
     // ── LCARS button (rounded rectangle) – same helper as UpgradesScene ──
     createLcarsButton(x, y, btnWidth, btnHeight, radius, fontFamily, label, fillColor, textColor, onPress) {
         const bg = this.add.graphics()
+        let _y = y
         const drawBg = (alpha) => {
             bg.clear()
             bg.fillStyle(fillColor, alpha)
-            bg.fillRoundedRect(x - btnWidth / 2, y, btnWidth, btnHeight, radius)
+            bg.fillRoundedRect(x - btnWidth / 2, _y, btnWidth, btnHeight, radius)
         }
         drawBg(1)
 
         const btnFontSize = btnHeight > 42 ? '18px' : '14px'
-        const text = this.add.text(x, y + btnHeight / 2, label, {
+        const text = this.add.text(x, _y + btnHeight / 2, label, {
             fontSize: btnFontSize,
             color: textColor,
             fontFamily: fontFamily,
             fontStyle: 'bold'
         }).setOrigin(0.5)
 
-        const zone = this.add.zone(x, y + btnHeight / 2, btnWidth, btnHeight).setInteractive()
+        const zone = this.add.zone(x, _y + btnHeight / 2, btnWidth, btnHeight).setInteractive()
         zone.on('pointerdown', () => { this.sound.play('button-click'); onPress() })
         zone.on('pointerover', () => { drawBg(0.7); text.setScale(1.04) })
         zone.on('pointerout',  () => { drawBg(1);   text.setScale(1.0)  })
 
-        return { bg, text, zone }
+        // moveButton(newY) redraws background and repositions text/zone at a new Y
+        const moveButton = (newY) => {
+            _y = newY
+            drawBg(1)
+            text.setY(newY + btnHeight / 2)
+            zone.setY(newY + btnHeight / 2)
+        }
+
+        return { bg, text, zone, moveButton }
     }
 
     createInfoPanel(isMobile, lcarsFont, lcarsChromePad, lowerBlackStart) {
@@ -137,7 +146,7 @@ class LevelSelectScene extends Phaser.Scene {
             panelX      = lcarsChromePad
             panelY      = lowerBlackStart + 8
             panelWidth  = Math.round(width * 0.40)
-            panelHeight = height - panelY - 90  // 90px clears mobile browser chrome bar
+            panelHeight = height - panelY - 8
         } else {
             panelX      = lcarsChromePad
             panelY      = lowerBlackStart + 14
@@ -190,13 +199,15 @@ class LevelSelectScene extends Phaser.Scene {
             })
         }
 
-        // Launch button at bottom of panel
-        const btnH  = isMobile ? 32 : 38
-        const btnY  = panelY + panelHeight - (isMobile ? 44 : 54)
+        // Launch button – Y position is set dynamically in updateInfoPanel()
+        // so it always appears directly below the content, never off-screen.
+        const btnH  = isMobile ? 36 : 42
         const btnBW = panelWidth - padding * 2
         const btnCX = panelX + padding + btnBW / 2
+        this.launchBtnH  = btnH
+        this.launchBtnCX = btnCX
         this.launchBtn = this.createLcarsButton(
-            btnCX, btnY, btnBW, btnH, 6, lcarsFont,
+            btnCX, panelY + padding, btnBW, btnH, 6, lcarsFont,
             isMobile ? 'LAUNCH' : 'LAUNCH MISSION',
             0xFF9900, '#000000',
             () => { this.launchLevel() }
@@ -362,6 +373,7 @@ class LevelSelectScene extends Phaser.Scene {
             )
             tx.stats.setVisible(true)
             tx.locked.setVisible(false)
+            this.launchBtn.moveButton(tx.stats.y + tx.stats.height + gap * 2)
             this.launchBtn.bg.setVisible(true)
             this.launchBtn.text.setVisible(true)
             this.launchBtn.zone.setInteractive()
@@ -369,6 +381,7 @@ class LevelSelectScene extends Phaser.Scene {
             tx.stats.setText('STATUS: READY\n\nMission not yet attempted')
             tx.stats.setVisible(true)
             tx.locked.setVisible(false)
+            this.launchBtn.moveButton(tx.stats.y + tx.stats.height + gap * 2)
             this.launchBtn.bg.setVisible(true)
             this.launchBtn.text.setVisible(true)
             this.launchBtn.zone.setInteractive()
