@@ -45,7 +45,7 @@ class MainMenuScene extends Phaser.Scene {
         const titleSize = upperBlackBottom > 200 ? '60px' : upperBlackBottom > 120 ? '40px' : '28px'
         const titleY = Math.round(upperBlackBottom * 0.50)
 
-        this.add.text(btnLeft, titleY, 'USS Aurora', {
+        this.add.text(btnLeft, titleY, 'USS AURORA', {
             fontSize: titleSize,
             color: '#FF9900',
             fontFamily: lcarsFont,
