@@ -922,7 +922,7 @@ class Level1Scene extends Phaser.Scene {
         const pauseButtonStyle = {
             fontSize: '12px',
             color: '#FF9900',
-            fontFamily: 'Courier New, monospace',
+            fontFamily: 'Antonio, Oswald, Arial Narrow, sans-serif',
             fontStyle: 'bold'
         };
         this.pauseButton = this.add.text(50, 25, 'PAUSE', pauseButtonStyle);
@@ -4523,106 +4523,156 @@ class Level1Scene extends Phaser.Scene {
     createPauseMenu() {
         this.pauseMenu = [];
         this.pauseMenuButtons = []; // Store button references for cleanup
-        
+
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
-        
+        const lcarsFont = 'Antonio, Oswald, Arial Narrow, sans-serif';
+
         // Semi-transparent overlay
-        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7);
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.75);
         overlay.setScrollFactor(0);
         overlay.setDepth(10000);
         this.pauseMenu.push(overlay);
-        
-        // Title with LCARS styling
-        const title = this.add.text(width / 2, height / 2 - 80, 'PAUSED', {
-            fontSize: '48px',
-            color: '#FF9900',
-            fontFamily: 'Courier New, monospace',
+
+        // LCARS panel dimensions
+        const panelW = Math.min(Math.round(width * 0.55), 360);
+        const panelH = Math.min(Math.round(height * 0.55), 300);
+        const panelX = Math.round(width / 2 - panelW / 2);
+        const panelY = Math.round(height / 2 - panelH / 2);
+        const radius = 8;
+        const depth = 10001;
+
+        // Panel background
+        const panelBg = this.add.graphics();
+        panelBg.fillStyle(0x080818, 0.96);
+        panelBg.fillRoundedRect(panelX, panelY, panelW, panelH, radius);
+        panelBg.lineStyle(2, 0xFF9900, 1);
+        panelBg.strokeRoundedRect(panelX, panelY, panelW, panelH, radius);
+        panelBg.setScrollFactor(0);
+        panelBg.setDepth(depth);
+        this.pauseMenu.push(panelBg);
+
+        // LCARS header bar
+        const headerH = Math.round(panelH * 0.22);
+        const headerBar = this.add.graphics();
+        headerBar.fillStyle(0xFF9900, 1);
+        headerBar.fillRoundedRect(panelX, panelY, panelW, headerH, { tl: radius, tr: radius, bl: 0, br: 0 });
+        headerBar.setScrollFactor(0);
+        headerBar.setDepth(depth + 1);
+        this.pauseMenu.push(headerBar);
+
+        // Title text inside header bar
+        const titleFontSize = headerH > 55 ? '28px' : '22px';
+        const title = this.add.text(panelX + panelW / 2, panelY + headerH / 2, 'MISSION PAUSED', {
+            fontSize: titleFontSize,
+            color: '#000000',
+            fontFamily: lcarsFont,
             fontStyle: 'bold'
         });
         title.setOrigin(0.5);
         title.setScrollFactor(0);
-        title.setDepth(10001);
+        title.setDepth(depth + 2);
         this.pauseMenu.push(title);
-        
-        // Continue button
-        const continueButtonBg = this.add.graphics();
-        continueButtonBg.fillStyle(0x333333, 0.9);
-        continueButtonBg.fillRoundedRect(width / 2 - 100, height / 2 - 20, 200, 50, 5);
-        continueButtonBg.lineStyle(3, 0x00FF00, 1);
-        continueButtonBg.strokeRoundedRect(width / 2 - 100, height / 2 - 20, 200, 50, 5);
-        continueButtonBg.setScrollFactor(0);
-        continueButtonBg.setDepth(10001);
-        this.pauseMenu.push(continueButtonBg);
-        
-        const continueButton = this.add.text(width / 2, height / 2 + 5, '[ CONTINUE ]', {
-            fontSize: '24px',
-            color: '#00FF00',
-            fontFamily: 'Courier New, monospace',
+
+        // Cyan accent line below header
+        const accentLine = this.add.graphics();
+        accentLine.lineStyle(1, 0x00CCFF, 0.5);
+        accentLine.lineBetween(panelX + 12, panelY + headerH + 3, panelX + panelW - 12, panelY + headerH + 3);
+        accentLine.setScrollFactor(0);
+        accentLine.setDepth(depth + 1);
+        this.pauseMenu.push(accentLine);
+
+        // Button layout
+        const btnW = Math.round(panelW * 0.72);
+        const btnH = panelH > 240 ? 44 : 36;
+        const btnX = Math.round(width / 2);
+        const contentTop = panelY + headerH + 8;
+        const contentH = panelH - headerH - 8;
+        const btn1Y = contentTop + Math.round(contentH * 0.12);
+        const btn2Y = contentTop + Math.round(contentH * 0.55);
+        const btnFontSize = btnH > 40 ? '20px' : '16px';
+
+        // CONTINUE button (orange LCARS fill)
+        const continueBg = this.add.graphics();
+        const drawContinueBg = (color) => {
+            continueBg.clear();
+            continueBg.fillStyle(color, 1);
+            continueBg.fillRoundedRect(btnX - btnW / 2, btn1Y, btnW, btnH, 6);
+        };
+        drawContinueBg(0xFF9900);
+        continueBg.setScrollFactor(0);
+        continueBg.setDepth(depth + 1);
+        this.pauseMenu.push(continueBg);
+
+        const continueButton = this.add.text(btnX, btn1Y + btnH / 2, 'CONTINUE', {
+            fontSize: btnFontSize,
+            color: '#000000',
+            fontFamily: lcarsFont,
             fontStyle: 'bold'
         });
         continueButton.setOrigin(0.5);
         continueButton.setScrollFactor(0);
-        continueButton.setDepth(10002);
+        continueButton.setDepth(depth + 2);
         continueButton.setInteractive({ useHandCursor: true });
-        
+
         // Use .once() for click to prevent duplicate triggers
         // Use .on() for hover effects which are cleaned up in cleanupPauseMenu()
         continueButton.once('pointerdown', () => {
             this.resumeGame();
         });
-        
+
         continueButton.on('pointerover', () => {
-            continueButton.setColor('#00FFFF');
-            continueButton.setScale(1.05);
+            drawContinueBg(0xFFCC44);
         });
-        
+
         continueButton.on('pointerout', () => {
-            continueButton.setColor('#00FF00');
-            continueButton.setScale(1.0);
+            drawContinueBg(0xFF9900);
         });
-        
+
         this.pauseMenu.push(continueButton);
         this.pauseMenuButtons.push(continueButton);
-        
-        // Quit button
-        const quitButtonBg = this.add.graphics();
-        quitButtonBg.fillStyle(0x333333, 0.9);
-        quitButtonBg.fillRoundedRect(width / 2 - 100, height / 2 + 50, 200, 50, 5);
-        quitButtonBg.lineStyle(3, 0xFF0000, 1);
-        quitButtonBg.strokeRoundedRect(width / 2 - 100, height / 2 + 50, 200, 50, 5);
-        quitButtonBg.setScrollFactor(0);
-        quitButtonBg.setDepth(10001);
-        this.pauseMenu.push(quitButtonBg);
-        
-        const quitButton = this.add.text(width / 2, height / 2 + 75, '[ QUIT TO MENU ]', {
-            fontSize: '24px',
-            color: '#FF0000',
-            fontFamily: 'Courier New, monospace',
+
+        // QUIT button (dark LCARS blue with cyan border)
+        const quitBg = this.add.graphics();
+        const drawQuitBg = (fillColor, borderColor) => {
+            quitBg.clear();
+            quitBg.fillStyle(fillColor, 1);
+            quitBg.fillRoundedRect(btnX - btnW / 2, btn2Y, btnW, btnH, 6);
+            quitBg.lineStyle(2, borderColor, 1);
+            quitBg.strokeRoundedRect(btnX - btnW / 2, btn2Y, btnW, btnH, 6);
+        };
+        drawQuitBg(0x112244, 0x4499CC);
+        quitBg.setScrollFactor(0);
+        quitBg.setDepth(depth + 1);
+        this.pauseMenu.push(quitBg);
+
+        const quitButton = this.add.text(btnX, btn2Y + btnH / 2, 'QUIT TO MENU', {
+            fontSize: btnFontSize,
+            color: '#4499CC',
+            fontFamily: lcarsFont,
             fontStyle: 'bold'
         });
         quitButton.setOrigin(0.5);
         quitButton.setScrollFactor(0);
-        quitButton.setDepth(10002);
+        quitButton.setDepth(depth + 2);
         quitButton.setInteractive({ useHandCursor: true });
-        
+
         // Use .once() for click to prevent duplicate triggers
         // Use .on() for hover effects which are cleaned up in cleanupPauseMenu()
         quitButton.once('pointerdown', () => {
-            // Clean up and return to main menu
             this.quitToMainMenu();
         });
-        
+
         quitButton.on('pointerover', () => {
-            quitButton.setColor('#FF6666');
-            quitButton.setScale(1.05);
+            drawQuitBg(0x1A3366, 0x66CCFF);
+            quitButton.setColor('#66CCFF');
         });
-        
+
         quitButton.on('pointerout', () => {
-            quitButton.setColor('#FF0000');
-            quitButton.setScale(1.0);
+            drawQuitBg(0x112244, 0x4499CC);
+            quitButton.setColor('#4499CC');
         });
-        
+
         this.pauseMenu.push(quitButton);
         this.pauseMenuButtons.push(quitButton);
     }
