@@ -45,6 +45,8 @@ class LevelSelectScene extends Phaser.Scene {
         const titleSize = upperBlackBottom > 200 ? '60px' : upperBlackBottom > 120 ? '40px' : '28px'
         const titleY = Math.round(upperBlackBottom * 0.50)
 
+        this.isMobile = isMobile
+
         // ← MAIN MENU – interactive back button in the upper area
         this.backBtn = this.add.text(btnLeft, titleY, '← MAIN MENU', {
             fontSize: titleSize,
@@ -52,10 +54,15 @@ class LevelSelectScene extends Phaser.Scene {
             fontFamily: lcarsFont,
             fontStyle: 'bold'
         }).setOrigin(0, 0.5)
-        this.backBtn.setInteractive({ useHandCursor: true })
-        this.backBtn.on('pointerover', () => this.backBtn.setStyle({ color: '#FFCC44' }))
-        this.backBtn.on('pointerout',  () => this.backBtn.setStyle({ color: '#FF9900' }))
-        this.backBtn.on('pointerdown', () => {
+        // Use an explicit zone for the hit target so the touch area is always
+        // large enough regardless of rendered text size (important on mobile).
+        const backZoneW = Math.min(Math.round(width * 0.55), 360)
+        const backZoneH = Math.max(parseInt(titleSize), 44) + 8
+        this.backBtnZone = this.add.zone(btnLeft + backZoneW / 2, titleY, backZoneW, backZoneH)
+            .setInteractive({ useHandCursor: true })
+        this.backBtnZone.on('pointerover', () => this.backBtn.setStyle({ color: '#FFCC44' }))
+        this.backBtnZone.on('pointerout',  () => this.backBtn.setStyle({ color: '#FF9900' }))
+        this.backBtnZone.on('pointerdown', () => {
             this.sound.play('button-click')
             this.navigateBack()
         })
@@ -155,27 +162,32 @@ class LevelSelectScene extends Phaser.Scene {
         const descSize  = isMobile ? '13px' : '15px'
         const statsSize = isMobile ? '12px' : '14px'
 
+        // Store for dynamic repositioning in updateInfoPanel()
+        this.infoPanelTextX    = panelX + padding
+        this.infoPanelTextBaseY = panelY + padding
+        this.infoPanelLineGap  = isMobile ? 8 : 10
+
         this.infoPanelTexts = {
-            levelName: this.add.text(panelX + padding, panelY + padding, '', {
+            levelName: this.add.text(this.infoPanelTextX, this.infoPanelTextBaseY, '', {
                 fontSize: nameSize,
                 color: '#FF9900',
                 fontFamily: lcarsFont,
                 fontStyle: 'bold',
                 wordWrap: { width: panelWidth - padding * 2 }
             }),
-            description: this.add.text(panelX + padding, panelY + padding + (isMobile ? 46 : 58), '', {
+            description: this.add.text(this.infoPanelTextX, this.infoPanelTextBaseY, '', {
                 fontSize: descSize,
                 color: '#CCCCCC',
                 fontFamily: lcarsFont,
                 wordWrap: { width: panelWidth - padding * 2 }
             }),
-            stats: this.add.text(panelX + padding, panelY + padding + (isMobile ? 110 : 135), '', {
+            stats: this.add.text(this.infoPanelTextX, this.infoPanelTextBaseY, '', {
                 fontSize: statsSize,
                 color: '#66CCFF',
                 fontFamily: lcarsFont,
                 wordWrap: { width: panelWidth - padding * 2 }
             }),
-            locked: this.add.text(panelX + padding, panelY + padding + (isMobile ? 110 : 135), '', {
+            locked: this.add.text(this.infoPanelTextX, this.infoPanelTextBaseY, '', {
                 fontSize: descSize,
                 color: '#CC4444',
                 fontFamily: lcarsFont,
@@ -325,39 +337,50 @@ class LevelSelectScene extends Phaser.Scene {
         const levelInfo  = ProgressConfig.levelInfo[this.selectedLevel]
         const isUnlocked = ProgressConfig.isLevelUnlocked(this.selectedLevel, this.saveData)
         const stats      = ProgressConfig.getLevelStats(this.selectedLevel, this.saveData)
+        const tx         = this.infoPanelTexts
+        const gap        = this.infoPanelLineGap
 
+        // Set level name first so we can measure its rendered height
         if (isUnlocked) {
-            this.infoPanelTexts.levelName.setText(`LEVEL ${this.selectedLevel}: ${levelInfo.name}`)
-            this.infoPanelTexts.description.setText(levelInfo.description)
+            tx.levelName.setText(`LEVEL ${this.selectedLevel}: ${levelInfo.name}`)
+            tx.description.setText(levelInfo.description)
         } else {
-            this.infoPanelTexts.levelName.setText(`LEVEL ${this.selectedLevel}: ???`)
-            this.infoPanelTexts.description.setText('Complete previous missions to unlock')
+            tx.levelName.setText(`LEVEL ${this.selectedLevel}: ???`)
+            tx.description.setText('Complete previous missions to unlock')
         }
 
+        // Reposition description below the rendered level name
+        tx.description.setY(tx.levelName.y + tx.levelName.height + gap)
+
+        // Reposition stats/locked below the rendered description
+        const statsY = tx.description.y + tx.description.height + gap
+        tx.stats.setY(statsY)
+        tx.locked.setY(statsY)
+
         if (stats) {
-            this.infoPanelTexts.stats.setText(
+            tx.stats.setText(
                 `STATUS: COMPLETED ★\n\n` +
                 `High Score: ${stats.highScore}\n` +
                 `Enemies Defeated: ${stats.enemiesKilled}\n` +
                 `Pods Rescued: ${stats.podsRescued}\n` +
                 `Waves Cleared: ${stats.wave}`
             )
-            this.infoPanelTexts.stats.setVisible(true)
-            this.infoPanelTexts.locked.setVisible(false)
+            tx.stats.setVisible(true)
+            tx.locked.setVisible(false)
             this.launchBtn.bg.setVisible(true)
             this.launchBtn.text.setVisible(true)
             this.launchBtn.zone.setInteractive()
         } else if (isUnlocked) {
-            this.infoPanelTexts.stats.setText('STATUS: READY\n\nMission not yet attempted')
-            this.infoPanelTexts.stats.setVisible(true)
-            this.infoPanelTexts.locked.setVisible(false)
+            tx.stats.setText('STATUS: READY\n\nMission not yet attempted')
+            tx.stats.setVisible(true)
+            tx.locked.setVisible(false)
             this.launchBtn.bg.setVisible(true)
             this.launchBtn.text.setVisible(true)
             this.launchBtn.zone.setInteractive()
         } else {
-            this.infoPanelTexts.stats.setVisible(false)
-            this.infoPanelTexts.locked.setText('🔒 LOCKED\n\nComplete previous missions to unlock this level')
-            this.infoPanelTexts.locked.setVisible(true)
+            tx.stats.setVisible(false)
+            tx.locked.setText('🔒 LOCKED\n\nComplete previous missions to unlock this level')
+            tx.locked.setVisible(true)
             this.launchBtn.bg.setVisible(false)
             this.launchBtn.text.setVisible(false)
             this.launchBtn.zone.disableInteractive()
@@ -424,7 +447,7 @@ class LevelSelectScene extends Phaser.Scene {
         this.tweens.killAll()
 
         // Disable all interactive elements
-        this.backBtn.disableInteractive()
+        this.backBtnZone.disableInteractive()
         this.missionSubtitle.disableInteractive()
         if (this.launchBtn) this.launchBtn.zone.disableInteractive()
         this.levelNodes.forEach(({ node }) => node.disableInteractive())
