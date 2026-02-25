@@ -29,11 +29,11 @@ const ProgressConfig = {
         3: { name: 'Siege of New Horizon', description: 'Provide orbital defense and evacuate civilians from the colony' },
         4: { name: 'Fractured Nexus', description: 'Fight through weapon platforms and mine fields to save a Federation convoy' },
         5: { name: 'Guardian Protocol', description: 'Escort and shield the damaged USS Sentinel through a gauntlet of Crystalis pursuit forces, buying time for emergency repairs' },
-        6: { name: 'The Badlands', description: 'Navigate treacherous plasma storms' },
-        7: { name: 'Battle of Sector 001', description: 'Defend Earth from invasion' },
-        8: { name: 'Wormhole Defense', description: 'Secure the Bajoran wormhole' },
-        9: { name: 'Final Stand', description: 'Hold the line at all costs' },
-        10: { name: 'Endgame', description: 'Face the Crystalis flagship' },
+        6: { name: 'Resonant Swarm', description: 'Battle synchronized crystal formations, rescue a Federation supply convoy, and shatter a resonant hive boss that spawns reinforcements from its facets' },
+        7: { name: 'Romulan Shadows', description: 'Evade a massive Romulan warship pursuing the Aurora while fending off opportunistic Crystalis attacks, then destroy its cloaking matrix in a climactic confrontation' },
+        8: { name: 'Federation Counterstrike', description: 'Coordinate with the USS Sentinel to assault a crystal staging ground, protect allied wingmen through dense enemy lines, and defeat a battleship enforcer' },
+        9: { name: "Harbinger's Wake", description: 'Trace the Crystalis to their home planet, survive reality-warping waves, and rescue the last escape pods from a doomed outpost while defeating harbinger guardians' },
+        10: { name: 'Crystalline Reckoning', description: 'Confront the Crystalis flagship in an epic finale — endure multi-phase onslaughts through shields, turrets, and core vulnerabilities, then destroy the entity core to claim victory' },
         11: { name: 'Testing Grounds', description: 'Holodeck simulation - analyze enemy capabilities' }
     },
 
