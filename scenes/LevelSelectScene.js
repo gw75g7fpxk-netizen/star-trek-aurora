@@ -47,22 +47,17 @@ class LevelSelectScene extends Phaser.Scene {
 
         this.isMobile = isMobile
 
-        // ← MAIN MENU – interactive back button in the upper area
+        // ← MAIN MENU – interactive back button, identical pattern to UpgradesScene
         this.backBtn = this.add.text(btnLeft, titleY, '← MAIN MENU', {
             fontSize: titleSize,
             color: '#FF9900',
             fontFamily: lcarsFont,
             fontStyle: 'bold'
         }).setOrigin(0, 0.5)
-        // Use an explicit zone for the hit target so the touch area is always
-        // large enough regardless of rendered text size (important on mobile).
-        const backZoneW = Math.min(Math.round(width * 0.55), 360)
-        const backZoneH = Math.max(parseInt(titleSize), 44) + 8
-        this.backBtnZone = this.add.zone(btnLeft + backZoneW / 2, titleY, backZoneW, backZoneH)
-            .setInteractive({ useHandCursor: true })
-        this.backBtnZone.on('pointerover', () => this.backBtn.setStyle({ color: '#FFCC44' }))
-        this.backBtnZone.on('pointerout',  () => this.backBtn.setStyle({ color: '#FF9900' }))
-        this.backBtnZone.on('pointerdown', () => {
+        this.backBtn.setInteractive({ useHandCursor: true })
+        this.backBtn.on('pointerover', () => this.backBtn.setStyle({ color: '#FFCC44' }))
+        this.backBtn.on('pointerout',  () => this.backBtn.setStyle({ color: '#FF9900' }))
+        this.backBtn.on('pointerdown', () => {
             this.sound.play('button-click')
             this.navigateBack()
         })
@@ -76,9 +71,9 @@ class LevelSelectScene extends Phaser.Scene {
             fontFamily: lcarsFont
         }).setOrigin(0, 0.5)
 
-        // Secret tap handler on subtitle
-        const hitArea = new Phaser.Geom.Rectangle(-10, -20, 300, 40)
-        this.missionSubtitle.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains)
+        // Secret tap handler – use natural text bounds so the hit area never
+        // overlaps the back button above it
+        this.missionSubtitle.setInteractive({ useHandCursor: false })
         this.missionSubtitle.on('pointerdown', () => {
             this.secretTapCount++
             console.log(`Tap ${this.secretTapCount}/5 on MISSION SELECT`)
@@ -443,11 +438,8 @@ class LevelSelectScene extends Phaser.Scene {
         if (this.isNavigatingBack) return
         this.isNavigatingBack = true
 
-        // Stop any running tweens (e.g. the fade-in) to avoid conflicts
-        this.tweens.killAll()
-
-        // Disable all interactive elements
-        this.backBtnZone.disableInteractive()
+        // Disable all interactive elements – identical pattern to UpgradesScene
+        this.backBtn.disableInteractive()
         this.missionSubtitle.disableInteractive()
         if (this.launchBtn) this.launchBtn.zone.disableInteractive()
         this.levelNodes.forEach(({ node }) => node.disableInteractive())
