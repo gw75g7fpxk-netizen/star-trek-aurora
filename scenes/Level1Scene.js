@@ -933,6 +933,7 @@ class Level1Scene extends Phaser.Scene {
         
         // Pause button click handler
         this.pauseButton.on('pointerdown', () => {
+            this.sound.play('button-click');
             this.togglePause();
         });
         
@@ -4618,6 +4619,7 @@ class Level1Scene extends Phaser.Scene {
         // Use .once() for click to prevent duplicate triggers
         // Use .on() for hover effects which are cleaned up in cleanupPauseMenu()
         continueButton.once('pointerdown', () => {
+            this.sound.play('button-click');
             this.resumeGame();
         });
 
@@ -4660,6 +4662,7 @@ class Level1Scene extends Phaser.Scene {
         // Use .once() for click to prevent duplicate triggers
         // Use .on() for hover effects which are cleaned up in cleanupPauseMenu()
         quitButton.once('pointerdown', () => {
+            this.sound.play('button-click');
             this.quitToMainMenu();
         });
 
