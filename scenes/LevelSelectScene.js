@@ -151,9 +151,9 @@ class LevelSelectScene extends Phaser.Scene {
         this.infoPanelBg.strokeRoundedRect(panelX, panelY, panelWidth, panelHeight, 6)
 
         const padding   = isMobile ? 10 : 16
-        const nameSize  = isMobile ? '16px' : '20px'
-        const descSize  = isMobile ? '11px' : '13px'
-        const statsSize = isMobile ? '10px' : '12px'
+        const nameSize  = isMobile ? '18px' : '22px'
+        const descSize  = isMobile ? '13px' : '15px'
+        const statsSize = isMobile ? '12px' : '14px'
 
         this.infoPanelTexts = {
             levelName: this.add.text(panelX + padding, panelY + padding, '', {
@@ -163,19 +163,19 @@ class LevelSelectScene extends Phaser.Scene {
                 fontStyle: 'bold',
                 wordWrap: { width: panelWidth - padding * 2 }
             }),
-            description: this.add.text(panelX + padding, panelY + padding + (isMobile ? 40 : 50), '', {
+            description: this.add.text(panelX + padding, panelY + padding + (isMobile ? 46 : 58), '', {
                 fontSize: descSize,
                 color: '#CCCCCC',
                 fontFamily: lcarsFont,
                 wordWrap: { width: panelWidth - padding * 2 }
             }),
-            stats: this.add.text(panelX + padding, panelY + padding + (isMobile ? 90 : 110), '', {
+            stats: this.add.text(panelX + padding, panelY + padding + (isMobile ? 110 : 135), '', {
                 fontSize: statsSize,
                 color: '#66CCFF',
                 fontFamily: lcarsFont,
                 wordWrap: { width: panelWidth - padding * 2 }
             }),
-            locked: this.add.text(panelX + padding, panelY + padding + (isMobile ? 90 : 110), '', {
+            locked: this.add.text(panelX + padding, panelY + padding + (isMobile ? 110 : 135), '', {
                 fontSize: descSize,
                 color: '#CC4444',
                 fontFamily: lcarsFont,
@@ -420,9 +420,14 @@ class LevelSelectScene extends Phaser.Scene {
         if (this.isNavigatingBack) return
         this.isNavigatingBack = true
 
-        // Disable interactive elements for the duration of the animation
+        // Stop any running tweens (e.g. the fade-in) to avoid conflicts
+        this.tweens.killAll()
+
+        // Disable all interactive elements
         this.backBtn.disableInteractive()
+        this.missionSubtitle.disableInteractive()
         if (this.launchBtn) this.launchBtn.zone.disableInteractive()
+        this.levelNodes.forEach(({ node }) => node.disableInteractive())
 
         const groups  = this.buildFadeGroups()
         const GAP_MS  = 100
