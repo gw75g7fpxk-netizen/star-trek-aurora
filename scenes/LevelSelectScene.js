@@ -1,9 +1,9 @@
-// Level Select Scene - Shows map of all levels as space route
+// Level Select Scene - Shows map of all levels as space route (LCARS theme)
 class LevelSelectScene extends Phaser.Scene {
     constructor() {
         super({ key: 'LevelSelectScene' })
         this.selectedLevel = 1
-        this.secretTapCount = 0 // Track taps on "MISSION SELECT" title
+        this.secretTapCount = 0 // Track taps on "MISSION SELECT" subtitle
         this.secretTapTimer = null // Timer to reset tap count
     }
 
@@ -11,336 +11,321 @@ class LevelSelectScene extends Phaser.Scene {
         const width = this.cameras.main.width
         const height = this.cameras.main.height
         const isMobile = width < 600 || height < 600
-        
+
         console.log('LevelSelectScene: Loading level selection...')
-        
-        // Load progress data
+
         this.saveData = ProgressConfig.loadProgress()
-        
-        // Background starfield
-        this.createStarfield()
-        
-        // Title
-        const titleSize = isMobile ? '28px' : '36px'
-        const titleY = isMobile ? 35 : 30
-        const title = this.add.text(width / 2, titleY, 'MISSION SELECT', {
+        this.isNavigatingBack = false
+        this.mapElements = []
+
+        // ── LCARS background – same nineslice config as MainMenuScene ──
+        const IMAGE_WIDTH = 1280
+        const IMAGE_HEIGHT = 876
+        const UPPER_BLACK_BOTTOM_Y = 275  // texture y of upper black section bottom
+        const LOWER_BLACK_START_Y = 490   // texture y where lower black area begins
+        const scale = width / IMAGE_WIDTH
+        const neededHeight = Math.max(IMAGE_HEIGHT, Math.ceil(height / scale))
+        this.add.nineslice(
+            0, 0,
+            'lcars-menu-background', null,
+            IMAGE_WIDTH, neededHeight,
+            0, 0, IMAGE_HEIGHT - 1, 0
+        ).setOrigin(0, 0).setScale(scale)
+
+        const lcarsFont = 'Antonio, Oswald, Arial Narrow, sans-serif'
+        // Left chrome panel is ~12.9% (165px at 1280px) of image width
+        const lcarsChromePad = Math.round(165 * width / 1280) + 8
+        this.lcarsChromePad = lcarsChromePad
+
+        const btnW = Math.min(Math.round(width * 0.65), 340)
+        const btnLeft = Math.round(width / 2 - btnW / 2)
+
+        // ── Upper black section ──
+        const upperBlackBottom = Math.round(UPPER_BLACK_BOTTOM_Y * scale)
+        const titleSize = upperBlackBottom > 200 ? '60px' : upperBlackBottom > 120 ? '40px' : '28px'
+        const titleY = Math.round(upperBlackBottom * 0.50)
+
+        // ← MAIN MENU – interactive back button in the upper area
+        this.backBtn = this.add.text(btnLeft, titleY, '← MAIN MENU', {
             fontSize: titleSize,
             color: '#FF9900',
-            fontFamily: 'Courier New, monospace',
+            fontFamily: lcarsFont,
             fontStyle: 'bold'
+        }).setOrigin(0, 0.5)
+        this.backBtn.setInteractive({ useHandCursor: true })
+        this.backBtn.on('pointerover', () => this.backBtn.setStyle({ color: '#FFCC44' }))
+        this.backBtn.on('pointerout',  () => this.backBtn.setStyle({ color: '#FF9900' }))
+        this.backBtn.on('pointerdown', () => {
+            this.sound.play('button-click')
+            this.navigateBack()
         })
-        title.setOrigin(0.5)
-        
-        // Make the title interactive with a larger hit area for easier tapping
-        const hitArea = new Phaser.Geom.Rectangle(-200, -20, 400, 40)
-        title.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains)
-        
-        // Add secret tap counter to unlock testing level
-        title.on('pointerdown', () => {
+
+        // MISSION SELECT subtitle – tucked below the back button, carries secret tap counter
+        const subY = Math.round(titleY + (upperBlackBottom - titleY) * 0.60)
+        const subSize = isMobile ? '13px' : '15px'
+        this.missionSubtitle = this.add.text(btnLeft, subY, 'MISSION SELECT', {
+            fontSize: subSize,
+            color: '#FFAA44',
+            fontFamily: lcarsFont
+        }).setOrigin(0, 0.5)
+
+        // Secret tap handler on subtitle
+        const hitArea = new Phaser.Geom.Rectangle(-10, -20, 300, 40)
+        this.missionSubtitle.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains)
+        this.missionSubtitle.on('pointerdown', () => {
             this.secretTapCount++
             console.log(`Tap ${this.secretTapCount}/5 on MISSION SELECT`)
-            
-            // Reset timer on each tap
-            if (this.secretTapTimer) {
-                this.secretTapTimer.remove()
-            }
-            
-            // Reset counter after 2 seconds of no taps
-            this.secretTapTimer = this.time.delayedCall(2000, () => {
-                this.secretTapCount = 0
-            })
-            
-            // Unlock level 11 after 5 taps
-            if (this.secretTapCount >= 5) {
-                this.unlockSecretLevel()
-            }
+            if (this.secretTapTimer) this.secretTapTimer.remove()
+            this.secretTapTimer = this.time.delayedCall(2000, () => { this.secretTapCount = 0 })
+            if (this.secretTapCount >= 5) this.unlockSecretLevel()
         })
-        
-        // Create the level map
-        this.createLevelMap(isMobile)
-        
-        // Create info panel for selected level
-        this.createInfoPanel(isMobile)
-        
-        // Back button
-        this.createBackButton(isMobile)
-        
+
+        // ── Lower black section ──
+        const lowerBlackStart = Math.round(LOWER_BLACK_START_Y * scale)
+
+        // Info panel (left side of lower area)
+        this.createInfoPanel(isMobile, lcarsFont, lcarsChromePad, lowerBlackStart)
+
+        // Level map (right side of lower area)
+        this.createLevelMap(isMobile, lcarsFont, lcarsChromePad, lowerBlackStart)
+
+        // Keyboard shortcut
+        this.input.keyboard.once('keydown-ESC', () => { this.navigateBack() })
+
         // Update info panel with initial selection
         this.updateInfoPanel()
+
+        // ── Fade-in animation (top → bottom stagger) ──
+        this.performFadeIn()
     }
-    
-    createStarfield() {
-        const width = this.cameras.main.width
-        const height = this.cameras.main.height
-        
-        // Create starfield background
-        for (let i = 0; i < 100; i++) {
-            const x = Phaser.Math.Between(0, width)
-            const y = Phaser.Math.Between(0, height)
-            const size = Phaser.Math.Between(1, 2)
-            const alpha = Phaser.Math.FloatBetween(0.3, 0.7)
-            
-            this.add.circle(x, y, size, 0xFFFFFF, alpha)
+
+    // ── LCARS button (rounded rectangle) – same helper as UpgradesScene ──
+    createLcarsButton(x, y, btnWidth, btnHeight, radius, fontFamily, label, fillColor, textColor, onPress) {
+        const bg = this.add.graphics()
+        const drawBg = (alpha) => {
+            bg.clear()
+            bg.fillStyle(fillColor, alpha)
+            bg.fillRoundedRect(x - btnWidth / 2, y, btnWidth, btnHeight, radius)
         }
+        drawBg(1)
+
+        const btnFontSize = btnHeight > 42 ? '18px' : '14px'
+        const text = this.add.text(x, y + btnHeight / 2, label, {
+            fontSize: btnFontSize,
+            color: textColor,
+            fontFamily: fontFamily,
+            fontStyle: 'bold'
+        }).setOrigin(0.5)
+
+        const zone = this.add.zone(x, y + btnHeight / 2, btnWidth, btnHeight).setInteractive()
+        zone.on('pointerdown', () => { this.sound.play('button-click'); onPress() })
+        zone.on('pointerover', () => { drawBg(0.7); text.setScale(1.04) })
+        zone.on('pointerout',  () => { drawBg(1);   text.setScale(1.0)  })
+
+        return { bg, text, zone }
     }
-    
-    createLevelMap(isMobile) {
-        const width = this.cameras.main.width
+
+    createInfoPanel(isMobile, lcarsFont, lcarsChromePad, lowerBlackStart) {
+        const width  = this.cameras.main.width
         const height = this.cameras.main.height
-        
-        // Define positions for 10 levels in a winding space route
-        // For mobile, use a more compact vertical layout
-        let levelPositions
-        
-        if (isMobile) {
-            // Mobile: Compact grid layout on the right side
-            levelPositions = [
-                { x: width * 0.55, y: height * 0.20 },  // Level 1
-                { x: width * 0.75, y: height * 0.20 },  // Level 2
-                { x: width * 0.55, y: height * 0.32 },  // Level 3
-                { x: width * 0.75, y: height * 0.32 },  // Level 4
-                { x: width * 0.55, y: height * 0.44 },  // Level 5
-                { x: width * 0.75, y: height * 0.44 },  // Level 6
-                { x: width * 0.55, y: height * 0.56 },  // Level 7
-                { x: width * 0.75, y: height * 0.56 },  // Level 8
-                { x: width * 0.55, y: height * 0.68 },  // Level 9
-                { x: width * 0.75, y: height * 0.68 },  // Level 10
-                { x: width * 0.65, y: height * 0.80 }   // Level 11 (secret)
-            ]
-        } else {
-            // Desktop: Winding space route - shifted right to avoid info panel overlap
-            levelPositions = [
-                { x: width * 0.45, y: height * 0.25 },  // Level 1
-                { x: width * 0.55, y: height * 0.3 },  // Level 2
-                { x: width * 0.65, y: height * 0.25 },  // Level 3
-                { x: width * 0.75, y: height * 0.3 },  // Level 4
-                { x: width * 0.85, y: height * 0.4 },  // Level 5
-                { x: width * 0.8, y: height * 0.55 },  // Level 6
-                { x: width * 0.68, y: height * 0.6 },  // Level 7
-                { x: width * 0.56, y: height * 0.55 },  // Level 8
-                { x: width * 0.48, y: height * 0.65 },  // Level 9
-                { x: width * 0.45, y: height * 0.75 },  // Level 10
-                { x: width * 0.65, y: height * 0.85 }   // Level 11 (secret)
-            ]
-        }
-        
-        this.levelNodes = []
-        
-        // Draw connecting lines between levels (skip for mobile to reduce clutter)
-        if (!isMobile) {
-            const graphics = this.add.graphics()
-            graphics.lineStyle(2, 0x00FFFF, 0.3)
-            
-            for (let i = 0; i < levelPositions.length - 1; i++) {
-                const start = levelPositions[i]
-                const end = levelPositions[i + 1]
-                graphics.lineBetween(start.x, start.y, end.x, end.y)
-            }
-        }
-        
-        // Create level nodes
-        const nodeSize = isMobile ? 15 : 20
-        const fontSize = isMobile ? '12px' : '16px'
-        const starOffset = isMobile ? -25 : -35
-        const lockOffset = isMobile ? -25 : -35
-        
-        for (let i = 1; i <= 11; i++) {
-            const pos = levelPositions[i - 1]
-            const isUnlocked = ProgressConfig.isLevelUnlocked(i, this.saveData)
-            const stats = ProgressConfig.getLevelStats(i, this.saveData)
-            const isCompleted = stats !== null
-            
-            // Node circle
-            const nodeColor = isCompleted ? 0x00FF00 : (isUnlocked ? 0xFFFF00 : 0x666666)
-            const nodeAlpha = isUnlocked ? 1.0 : 0.5
-            
-            const node = this.add.circle(pos.x, pos.y, nodeSize, nodeColor, nodeAlpha)
-            node.setStrokeStyle(isMobile ? 2 : 3, 0x00FFFF, nodeAlpha)
-            
-            if (isUnlocked) {
-                node.setInteractive({ useHandCursor: true })
-                
-                node.on('pointerdown', () => {
-                    this.sound.play('button-click')
-                    this.selectLevel(i)
-                })
-                
-                node.on('pointerover', () => {
-                    node.setScale(1.2)
-                    node.setAlpha(1.0)
-                })
-                
-                node.on('pointerout', () => {
-                    node.setScale(1.0)
-                    node.setAlpha(nodeAlpha)
-                })
-            }
-            
-            // Level number
-            const levelText = this.add.text(pos.x, pos.y, i.toString(), {
-                fontSize: fontSize,
-                color: '#000000',
-                fontFamily: 'Courier New, monospace',
-                fontStyle: 'bold'
-            })
-            levelText.setOrigin(0.5)
-            
-            // Completion star for completed levels
-            if (isCompleted) {
-                const star = this.add.text(pos.x, pos.y + starOffset, '★', {
-                    fontSize: isMobile ? '16px' : '20px',
-                    color: '#FFD700'
-                })
-                star.setOrigin(0.5)
-            }
-            
-            // Lock icon for locked levels
-            if (!isUnlocked) {
-                const lock = this.add.text(pos.x, pos.y + lockOffset, '🔒', {
-                    fontSize: isMobile ? '12px' : '16px'
-                })
-                lock.setOrigin(0.5)
-            }
-            
-            this.levelNodes.push({ node, levelNumber: i, isUnlocked })
-        }
-    }
-    
-    createInfoPanel(isMobile) {
-        const width = this.cameras.main.width
-        const height = this.cameras.main.height
-        
-        // Info panel background - adjust for mobile
+
         let panelX, panelY, panelWidth, panelHeight
-        
+
         if (isMobile) {
-            // Mobile: Smaller panel on left side with reduced height to avoid hiding back button
-            panelX = width * 0.03
-            panelY = height * 0.14
-            panelWidth = width * 0.44
-            panelHeight = height * 0.58
+            panelX      = lcarsChromePad
+            panelY      = lowerBlackStart + 8
+            panelWidth  = Math.round(width * 0.40)
+            panelHeight = height - panelY - 8
         } else {
-            // Desktop: Original size
-            panelX = width * 0.05
-            panelY = height * 0.15
-            panelWidth = width * 0.35
-            panelHeight = height * 0.7
+            panelX      = lcarsChromePad
+            panelY      = lowerBlackStart + 14
+            panelWidth  = Math.round(width * 0.33)
+            panelHeight = height - panelY - 14
         }
-        
-        const panel = this.add.graphics()
-        panel.fillStyle(0x000000, 0.8)
-        panel.fillRect(panelX, panelY, panelWidth, panelHeight)
-        panel.lineStyle(isMobile ? 2 : 3, 0x00FFFF, 1)
-        panel.strokeRect(panelX, panelY, panelWidth, panelHeight)
-        
-        // Info panel text (will be updated dynamically)
-        const padding = isMobile ? 10 : 20
-        const nameSize = isMobile ? '18px' : '24px'
-        const descSize = isMobile ? '12px' : '16px'
-        const statsSize = isMobile ? '11px' : '14px'
-        
+
+        // LCARS-styled panel background
+        this.infoPanelBg = this.add.graphics()
+        this.infoPanelBg.fillStyle(0x080818, 0.88)
+        this.infoPanelBg.fillRoundedRect(panelX, panelY, panelWidth, panelHeight, 6)
+        this.infoPanelBg.lineStyle(1, 0xFF9900, 0.35)
+        this.infoPanelBg.strokeRoundedRect(panelX, panelY, panelWidth, panelHeight, 6)
+
+        const padding   = isMobile ? 10 : 16
+        const nameSize  = isMobile ? '16px' : '20px'
+        const descSize  = isMobile ? '11px' : '13px'
+        const statsSize = isMobile ? '10px' : '12px'
+
         this.infoPanelTexts = {
             levelName: this.add.text(panelX + padding, panelY + padding, '', {
                 fontSize: nameSize,
                 color: '#FF9900',
-                fontFamily: 'Courier New, monospace',
+                fontFamily: lcarsFont,
                 fontStyle: 'bold',
                 wordWrap: { width: panelWidth - padding * 2 }
             }),
-            description: this.add.text(panelX + padding, panelY + padding + (isMobile ? 50 : 60), '', {
+            description: this.add.text(panelX + padding, panelY + padding + (isMobile ? 40 : 50), '', {
                 fontSize: descSize,
-                color: '#FFFFFF',
-                fontFamily: 'Courier New, monospace',
+                color: '#CCCCCC',
+                fontFamily: lcarsFont,
                 wordWrap: { width: panelWidth - padding * 2 }
             }),
-            stats: this.add.text(panelX + padding, panelY + padding + (isMobile ? 100 : 120), '', {
+            stats: this.add.text(panelX + padding, panelY + padding + (isMobile ? 90 : 110), '', {
                 fontSize: statsSize,
-                color: '#00FFFF',
-                fontFamily: 'Courier New, monospace',
+                color: '#66CCFF',
+                fontFamily: lcarsFont,
                 wordWrap: { width: panelWidth - padding * 2 }
             }),
-            locked: this.add.text(panelX + padding, panelY + padding + (isMobile ? 100 : 120), '', {
+            locked: this.add.text(panelX + padding, panelY + padding + (isMobile ? 90 : 110), '', {
                 fontSize: descSize,
-                color: '#FF0000',
-                fontFamily: 'Courier New, monospace',
+                color: '#CC4444',
+                fontFamily: lcarsFont,
                 wordWrap: { width: panelWidth - padding * 2 }
             })
         }
-        
-        // Play button
-        const buttonSize = isMobile ? '18px' : '24px'
-        const buttonY = panelY + panelHeight - (isMobile ? 50 : 60)
-        const buttonText = isMobile ? '[ LAUNCH ]' : '[ LAUNCH MISSION ]'
-        this.playButton = this.add.text(panelX + panelWidth / 2, buttonY, buttonText, {
-            fontSize: buttonSize,
-            color: '#00FF00',
-            fontFamily: 'Courier New, monospace',
-            fontStyle: 'bold'
-        })
-        this.playButton.setOrigin(0.5)
-        this.playButton.setInteractive()
-        
-        this.playButton.on('pointerdown', () => {
-            this.sound.play('button-click')
-            this.launchLevel()
-        })
-        
-        this.playButton.on('pointerover', () => {
-            this.playButton.setColor('#00FFFF')
-            this.playButton.setScale(1.05)
-        })
-        
-        this.playButton.on('pointerout', () => {
-            this.playButton.setColor('#00FF00')
-            this.playButton.setScale(1.0)
-        })
+
+        // Launch button at bottom of panel
+        const btnH  = isMobile ? 32 : 38
+        const btnY  = panelY + panelHeight - (isMobile ? 44 : 54)
+        const btnBW = panelWidth - padding * 2
+        const btnCX = panelX + padding + btnBW / 2
+        this.launchBtn = this.createLcarsButton(
+            btnCX, btnY, btnBW, btnH, 6, lcarsFont,
+            isMobile ? 'LAUNCH' : 'LAUNCH MISSION',
+            0xFF9900, '#000000',
+            () => { this.launchLevel() }
+        )
     }
-    
-    createBackButton(isMobile) {
-        const width = this.cameras.main.width
+
+    createLevelMap(isMobile, lcarsFont, lcarsChromePad, lowerBlackStart) {
+        const width  = this.cameras.main.width
         const height = this.cameras.main.height
-        
-        // Position back button based on screen size
-        // Mobile: Button near bottom but clear of OS touch areas and info panel
-        // Desktop: Button at top to avoid overlap with level map
-        const backSize = isMobile ? '16px' : '18px'
-        const backX = width / 2
-        const backY = isMobile ? height - 85 : 30
-        
-        const backButton = this.add.text(backX, backY, '[ BACK TO MENU ]', {
-            fontSize: backSize,
-            color: '#888888',
-            fontFamily: 'Courier New, monospace'
-        })
-        backButton.setOrigin(0.5)
-        backButton.setInteractive()
-        
-        backButton.on('pointerdown', () => {
-            this.sound.play('button-click')
-            this.scene.start('MainMenuScene')
-        })
-        
-        backButton.on('pointerover', () => {
-            backButton.setColor('#00FFFF')
-        })
-        
-        backButton.on('pointerout', () => {
-            backButton.setColor('#888888')
-        })
+        const rightChromePad = Math.round(20 * width / 1280) + 5
+
+        let levelPositions
+
+        if (isMobile) {
+            // Map area: right of info panel
+            const mapLeft   = lcarsChromePad + Math.round(width * 0.43)
+            const mapRight  = width - rightChromePad
+            const mapTop    = lowerBlackStart + 10
+            const mapBottom = height - 10
+            const mw = mapRight - mapLeft
+            const mh = mapBottom - mapTop
+
+            levelPositions = [
+                { x: mapLeft + mw * 0.20, y: mapTop + mh * 0.04 },  // Level 1
+                { x: mapLeft + mw * 0.78, y: mapTop + mh * 0.04 },  // Level 2
+                { x: mapLeft + mw * 0.20, y: mapTop + mh * 0.18 },  // Level 3
+                { x: mapLeft + mw * 0.78, y: mapTop + mh * 0.18 },  // Level 4
+                { x: mapLeft + mw * 0.20, y: mapTop + mh * 0.32 },  // Level 5
+                { x: mapLeft + mw * 0.78, y: mapTop + mh * 0.32 },  // Level 6
+                { x: mapLeft + mw * 0.20, y: mapTop + mh * 0.46 },  // Level 7
+                { x: mapLeft + mw * 0.78, y: mapTop + mh * 0.46 },  // Level 8
+                { x: mapLeft + mw * 0.20, y: mapTop + mh * 0.60 },  // Level 9
+                { x: mapLeft + mw * 0.78, y: mapTop + mh * 0.60 },  // Level 10
+                { x: mapLeft + mw * 0.50, y: mapTop + mh * 0.76 }   // Level 11 (secret)
+            ]
+        } else {
+            // Map area: right of the info panel
+            const mapLeft   = lcarsChromePad + Math.round(width * 0.36)
+            const mapRight  = width - rightChromePad
+            const mapTop    = lowerBlackStart + 20
+            const mapBottom = height - 20
+            const mw = mapRight - mapLeft
+            const mh = mapBottom - mapTop
+
+            levelPositions = [
+                { x: mapLeft + mw * 0.10, y: mapTop + mh * 0.08 },  // Level 1
+                { x: mapLeft + mw * 0.30, y: mapTop + mh * 0.16 },  // Level 2
+                { x: mapLeft + mw * 0.52, y: mapTop + mh * 0.08 },  // Level 3
+                { x: mapLeft + mw * 0.72, y: mapTop + mh * 0.16 },  // Level 4
+                { x: mapLeft + mw * 0.88, y: mapTop + mh * 0.30 },  // Level 5
+                { x: mapLeft + mw * 0.80, y: mapTop + mh * 0.50 },  // Level 6
+                { x: mapLeft + mw * 0.60, y: mapTop + mh * 0.58 },  // Level 7
+                { x: mapLeft + mw * 0.40, y: mapTop + mh * 0.50 },  // Level 8
+                { x: mapLeft + mw * 0.24, y: mapTop + mh * 0.64 },  // Level 9
+                { x: mapLeft + mw * 0.10, y: mapTop + mh * 0.78 },  // Level 10
+                { x: mapLeft + mw * 0.50, y: mapTop + mh * 0.88 }   // Level 11 (secret)
+            ]
+        }
+
+        this.levelNodes = []
+
+        // Connecting lines between levels
+        const graphics = this.add.graphics()
+        graphics.lineStyle(2, 0x00FFFF, 0.3)
+        for (let i = 0; i < levelPositions.length - 1; i++) {
+            const s = levelPositions[i]
+            const e = levelPositions[i + 1]
+            graphics.lineBetween(s.x, s.y, e.x, e.y)
+        }
+        this.mapElements.push(graphics)
+
+        const nodeSize  = isMobile ? 15 : 20
+        const fontSize  = isMobile ? '12px' : '16px'
+        const aboveNode = isMobile ? -25 : -35
+
+        for (let i = 1; i <= 11; i++) {
+            const pos         = levelPositions[i - 1]
+            const isUnlocked  = ProgressConfig.isLevelUnlocked(i, this.saveData)
+            const stats       = ProgressConfig.getLevelStats(i, this.saveData)
+            const isCompleted = stats !== null
+
+            const nodeColor = isCompleted ? 0x00FF00 : (isUnlocked ? 0xFFFF00 : 0x666666)
+            const nodeAlpha = isUnlocked ? 1.0 : 0.5
+
+            const node = this.add.circle(pos.x, pos.y, nodeSize, nodeColor, nodeAlpha)
+            node.setStrokeStyle(isMobile ? 2 : 3, 0x00FFFF, nodeAlpha)
+            this.mapElements.push(node)
+
+            if (isUnlocked) {
+                node.setInteractive({ useHandCursor: true })
+                node.on('pointerdown', () => { this.sound.play('button-click'); this.selectLevel(i) })
+                node.on('pointerover', () => { node.setScale(1.2); node.setAlpha(1.0) })
+                node.on('pointerout',  () => { node.setScale(1.0); node.setAlpha(nodeAlpha) })
+            }
+
+            // Level number label
+            const levelText = this.add.text(pos.x, pos.y, i.toString(), {
+                fontSize: fontSize,
+                color: '#000000',
+                fontFamily: lcarsFont,
+                fontStyle: 'bold'
+            }).setOrigin(0.5)
+            this.mapElements.push(levelText)
+
+            // Completion star
+            if (isCompleted) {
+                const star = this.add.text(pos.x, pos.y + aboveNode, '★', {
+                    fontSize: isMobile ? '16px' : '20px',
+                    color: '#FFD700'
+                }).setOrigin(0.5)
+                this.mapElements.push(star)
+            }
+
+            // Lock icon for locked levels
+            if (!isUnlocked) {
+                const lock = this.add.text(pos.x, pos.y + aboveNode, '🔒', {
+                    fontSize: isMobile ? '12px' : '16px'
+                }).setOrigin(0.5)
+                this.mapElements.push(lock)
+            }
+
+            this.levelNodes.push({ node, levelNumber: i, isUnlocked })
+        }
     }
-    
+
     selectLevel(levelNumber) {
         this.selectedLevel = levelNumber
         this.updateInfoPanel()
         console.log(`Selected level ${levelNumber}`)
     }
-    
+
     updateInfoPanel() {
-        const levelInfo = ProgressConfig.levelInfo[this.selectedLevel]
+        const levelInfo  = ProgressConfig.levelInfo[this.selectedLevel]
         const isUnlocked = ProgressConfig.isLevelUnlocked(this.selectedLevel, this.saveData)
-        const stats = ProgressConfig.getLevelStats(this.selectedLevel, this.saveData)
-        
-        // Update level name
+        const stats      = ProgressConfig.getLevelStats(this.selectedLevel, this.saveData)
+
         if (isUnlocked) {
             this.infoPanelTexts.levelName.setText(`LEVEL ${this.selectedLevel}: ${levelInfo.name}`)
             this.infoPanelTexts.description.setText(levelInfo.description)
@@ -348,10 +333,8 @@ class LevelSelectScene extends Phaser.Scene {
             this.infoPanelTexts.levelName.setText(`LEVEL ${this.selectedLevel}: ???`)
             this.infoPanelTexts.description.setText('Complete previous missions to unlock')
         }
-        
-        // Update stats or locked message
+
         if (stats) {
-            // Show completion stats
             this.infoPanelTexts.stats.setText(
                 `STATUS: COMPLETED ★\n\n` +
                 `High Score: ${stats.highScore}\n` +
@@ -361,45 +344,102 @@ class LevelSelectScene extends Phaser.Scene {
             )
             this.infoPanelTexts.stats.setVisible(true)
             this.infoPanelTexts.locked.setVisible(false)
-            this.playButton.setVisible(true)
+            this.launchBtn.bg.setVisible(true)
+            this.launchBtn.text.setVisible(true)
+            this.launchBtn.zone.setInteractive()
         } else if (isUnlocked) {
-            // Show unlocked but not completed
             this.infoPanelTexts.stats.setText('STATUS: READY\n\nMission not yet attempted')
             this.infoPanelTexts.stats.setVisible(true)
             this.infoPanelTexts.locked.setVisible(false)
-            this.playButton.setVisible(true)
+            this.launchBtn.bg.setVisible(true)
+            this.launchBtn.text.setVisible(true)
+            this.launchBtn.zone.setInteractive()
         } else {
-            // Show locked
             this.infoPanelTexts.stats.setVisible(false)
             this.infoPanelTexts.locked.setText('🔒 LOCKED\n\nComplete previous missions to unlock this level')
             this.infoPanelTexts.locked.setVisible(true)
-            this.playButton.setVisible(false)
+            this.launchBtn.bg.setVisible(false)
+            this.launchBtn.text.setVisible(false)
+            this.launchBtn.zone.disableInteractive()
         }
     }
-    
+
     launchLevel() {
         const isUnlocked = ProgressConfig.isLevelUnlocked(this.selectedLevel, this.saveData)
-        
         if (isUnlocked) {
             console.log(`Launching Level ${this.selectedLevel}`)
             // All levels use Level1Scene with level number parameter
             this.scene.start('Level1Scene', { levelNumber: this.selectedLevel })
         }
     }
-    
+
     unlockSecretLevel() {
         console.log('Secret testing level unlocked!')
-        
-        // Unlock level 11 in save data
         ProgressConfig.unlockLevel(11, this.saveData)
-        
-        // Reset tap counter
         this.secretTapCount = 0
-        if (this.secretTapTimer) {
-            this.secretTapTimer.remove()
-        }
-        
+        if (this.secretTapTimer) this.secretTapTimer.remove()
         // Recreate the level map to show level 11
         this.scene.restart()
+    }
+
+    // ── Helpers to build ordered fade groups (top → bottom) ──
+
+    buildFadeGroups() {
+        return [
+            [this.backBtn, this.missionSubtitle],
+            [
+                this.infoPanelBg,
+                this.infoPanelTexts.levelName,
+                this.infoPanelTexts.description,
+                this.infoPanelTexts.stats,
+                this.infoPanelTexts.locked,
+                this.launchBtn.bg,
+                this.launchBtn.text
+            ],
+            this.mapElements
+        ]
+    }
+
+    performFadeIn() {
+        const groups = this.buildFadeGroups()
+        const GAP_MS = 150
+        const DUR_MS = 400
+        groups.forEach((group, i) => {
+            group.forEach(el => el.setAlpha(0))
+            this.tweens.add({
+                targets: group,
+                alpha: 1,
+                duration: DUR_MS,
+                delay: i * GAP_MS,
+                ease: 'Linear'
+            })
+        })
+    }
+
+    navigateBack() {
+        if (this.isNavigatingBack) return
+        this.isNavigatingBack = true
+
+        // Disable interactive elements for the duration of the animation
+        this.backBtn.disableInteractive()
+        if (this.launchBtn) this.launchBtn.zone.disableInteractive()
+
+        const groups  = this.buildFadeGroups()
+        const GAP_MS  = 100
+        const DUR_MS  = 300
+        groups.forEach((group, i) => {
+            this.tweens.add({
+                targets: group,
+                alpha: 0,
+                duration: DUR_MS,
+                delay: i * GAP_MS,
+                ease: 'Linear'
+            })
+        })
+
+        const totalDelay = (groups.length - 1) * GAP_MS + DUR_MS
+        this.time.delayedCall(totalDelay, () => {
+            this.scene.start('MainMenuScene')
+        })
     }
 }
