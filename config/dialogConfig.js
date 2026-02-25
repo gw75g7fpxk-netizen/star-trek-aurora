@@ -96,6 +96,27 @@ const DialogConfig = {
                 title: 'INCOMING TRANSMISSION',
                 sequence: [
                     {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Captains log, star date 78350.4',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'The USS Aurora has been dispatched to assist the science vessel Horizon with some troubling readings near the Omicron Theta system.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'They are investigating the possibility that a new Crystalline Entity may have emerged.',
+                        audio: null
+                    },
+                    {
                         speaker: 'Commander T\'Vorin',
                         ship: 'USS Aurora',
                         portrait: 'playerShip',
@@ -127,14 +148,14 @@ const DialogConfig = {
                         speaker: 'Lieutenant Solis',
                         ship: 'USS Aurora',
                         portrait: 'playerShip',
-                        text: 'The vanguard ship is destroyed, Captain. The remaining Crystalis forces are retreating.',
+                        text: 'The vanguard ship is destroyed, Captain. Enemy forces are pulling back to regroup for another attack.',
                         audio: null
                     },
                     {
                         speaker: 'Captain Thorne',
                         ship: 'USS Aurora',
                         portrait: 'playerShip',
-                        text: 'Good work. Helm, take us toward that asteroid field. We need cover to regroup and figure out what we\'re dealing with.',
+                        text: 'Good work. Get me Starfleet command. Helm, take us toward that asteroid field. We need cover while we figure out what we\'re dealing with.',
                         audio: null
                     },
                     {
