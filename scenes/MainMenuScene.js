@@ -74,24 +74,45 @@ class MainMenuScene extends Phaser.Scene {
         const btn2Y = btn1Y + btnH + infoGap + infoH + btnGap
 
         // Mission Select button
-        this.createLcarsButton(
+        const btn1 = this.createLcarsButton(
             width / 2, btn1Y, btnW, btnH, btnRadius, lcarsFont,
             'MISSION SELECT', 0xFF9900, '#000000',
             () => { this.scene.start('LevelSelectScene') }
         )
-        this.add.text(width / 2, btn1Y + btnH + infoGap, `${unlockedCount} of 10 missions unlocked`, {
+        const btn1Info = this.add.text(width / 2, btn1Y + btnH + infoGap, `${unlockedCount} of 10 missions unlocked`, {
             fontSize: infoSize,
             color: '#FFAA44',
             fontFamily: lcarsFont
         }).setOrigin(0.5)
 
-        // Ship Upgrades button
-        this.createLcarsButton(
+        // Ship Upgrades button – clicking fades out both buttons then transitions
+        const btn2 = this.createLcarsButton(
             width / 2, btn2Y, btnW, btnH, btnRadius, lcarsFont,
             'SHIP UPGRADES', 0x9999CC, '#000000',
-            () => { this.scene.start('UpgradesScene') }
+            () => {
+                // Disable zones for the duration of the animation; the scene
+                // is destroyed by scene.start so they never need re-enabling.
+                btn1.zone.disableInteractive()
+                btn2.zone.disableInteractive()
+                // Fade out top button first
+                this.tweens.add({
+                    targets: [btn1.bg, btn1.text, btn1Info],
+                    alpha: 0,
+                    duration: 500,
+                    ease: 'Linear'
+                })
+                // Fade out bottom button slightly after, then start scene
+                this.tweens.add({
+                    targets: [btn2.bg, btn2.text, btn2Info],
+                    alpha: 0,
+                    duration: 500,
+                    delay: 200,
+                    ease: 'Linear',
+                    onComplete: () => { this.scene.start('UpgradesScene') }
+                })
+            }
         )
-        this.add.text(width / 2, btn2Y + btnH + infoGap, `${saveData.upgradePoints} upgrade points available`, {
+        const btn2Info = this.add.text(width / 2, btn2Y + btnH + infoGap, `${saveData.upgradePoints} upgrade points available`, {
             fontSize: infoSize,
             color: '#AAAAEE',
             fontFamily: lcarsFont
@@ -114,6 +135,23 @@ class MainMenuScene extends Phaser.Scene {
         // Keyboard shortcut
         this.input.keyboard.once('keydown-SPACE', () => {
             this.scene.start('LevelSelectScene')
+        })
+
+        // Fade in buttons top → bottom; the LCARS background and USS Aurora title
+        // stay at full alpha (they are present on the upgrades screen too).
+        const fadeGroups = [
+            [btn1.bg, btn1.text, btn1Info],
+            [btn2.bg, btn2.text, btn2Info]
+        ]
+        fadeGroups.forEach((group, i) => {
+            group.forEach(el => el.setAlpha(0))
+            this.tweens.add({
+                targets: group,
+                alpha: 1,
+                duration: 500,
+                delay: i * 200,
+                ease: 'Linear'
+            })
         })
     }
 
@@ -149,6 +187,7 @@ class MainMenuScene extends Phaser.Scene {
             drawBg(1)
             text.setScale(1.0)
         })
+        return { bg, text, zone }
     }
 
     getHighScore() {
