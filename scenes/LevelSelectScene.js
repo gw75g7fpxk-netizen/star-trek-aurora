@@ -137,7 +137,7 @@ class LevelSelectScene extends Phaser.Scene {
             panelX      = lcarsChromePad
             panelY      = lowerBlackStart + 8
             panelWidth  = Math.round(width * 0.40)
-            panelHeight = height - panelY - 8
+            panelHeight = height - panelY - 90  // 90px clears mobile browser chrome bar
         } else {
             panelX      = lcarsChromePad
             panelY      = lowerBlackStart + 14
