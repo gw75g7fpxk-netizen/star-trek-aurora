@@ -323,14 +323,51 @@ const WaveConfig = {
             difficulty: 3
         }
     },
+    // Level 8: Federation Counterstrike - Assault a crystal staging ground alongside the USS Sentinel
     level8: {
-        wave1: { 
-            enemyCount: 5, 
-            enemyTypes: ['fighter'],
-            shipCounts: { fighter: 5 },
-            spawnRate: 2000, 
-            difficulty: 1,
-            duration: 20000
+        wave1: {
+            enemyCount: 14,
+            enemyTypes: ['fighter', 'cruiser', 'scout'],
+            shipCounts: { fighter: 8, cruiser: 3, scout: 3 },
+            spawnRate: 1800,
+            difficulty: 1.8,
+            duration: 24000
+        },
+        wave2: {
+            enemyCount: 18,
+            enemyTypes: ['fighter', 'cruiser', 'destroyer'],
+            shipCounts: { fighter: 8, cruiser: 5, destroyer: 5 },
+            spawnRate: 1600,
+            difficulty: 2.2,
+            duration: 28000
+        },
+        wave3: {
+            enemyCount: 22,
+            enemyTypes: ['fighter', 'cruiser', 'destroyer', 'battleship'],
+            shipCounts: { fighter: 8, cruiser: 5, destroyer: 5, battleship: 4 },
+            spawnRate: 1400,
+            difficulty: 2.7,
+            duration: 32000
+        },
+        wave4: {
+            enemyCount: 26,
+            enemyTypes: ['fighter', 'cruiser', 'destroyer', 'battleship'],
+            shipCounts: { fighter: 10, cruiser: 6, destroyer: 5, battleship: 5 },
+            spawnRate: 1200,
+            difficulty: 3.2,
+            duration: 36000
+        },
+        wave5: {
+            enemyCount: 30,
+            enemyTypes: ['cruiser', 'destroyer', 'battleship', 'carrier'],
+            shipCounts: { cruiser: 8, destroyer: 7, battleship: 8, carrier: 7 },
+            spawnRate: 1000,
+            difficulty: 3.8,
+            duration: 40000
+        },
+        bossWave: {
+            threshold: 5, // Boss appears after wave 5
+            type: 'enemyBossLevel8'
         }
     },
     level9: {
