@@ -92,7 +92,7 @@ const PLAYER_HEALTH_BAR = {
 };
 
 // Boss-type enemies that get special explosion effects
-const BOSS_TYPE_ENEMIES = ['boss', 'enemyBossLevel1', 'enemyBossLevel2', 'enemyBossLevel3', 'enemyBossLevel4', 'enemyBossLevel5', 'enemyBossLevel8', 'enemyBossLevel9', 'battleship', 'romulanWarbird'];
+const BOSS_TYPE_ENEMIES = ['boss', 'enemyBossLevel1', 'enemyBossLevel2', 'enemyBossLevel3', 'enemyBossLevel4', 'enemyBossLevel5', 'enemyBossLevel8', 'enemyBossLevel9', 'enemyBossLevel10', 'battleship', 'romulanWarbird'];
 
 // Romulan Warbird cloaking constants for Level 7
 const WARBIRD_CLOAK_FADE_DURATION = 2000; // Milliseconds for fade-in/out during cloaking
@@ -262,6 +262,9 @@ class Level1Scene extends Phaser.Scene {
         
         // Level 8: Shield generator tracking
         this.level8Boss = null; // Reference to the Level 8 boss with shield generators
+        
+        // Level 10: Flagship shield turret tracking
+        this.level10Boss = null; // Reference to the Level 10 boss with shield turrets
         
         // Store camera dimensions for responsive layout
         this.updateCameraDimensions();
@@ -2744,6 +2747,13 @@ class Level1Scene extends Phaser.Scene {
                     this.level8Boss = boss;
                 }
                 
+                // Level 10: Set up shield turrets for the flagship boss
+                if (bossType === 'enemyBossLevel10') {
+                    boss.shieldGeneratorsAlive = config.shieldGeneratorCount || 3;
+                    boss.shieldsBlocked = true;
+                    this.level10Boss = boss;
+                }
+                
                 // Move boss into position with tween animation
                 this.tweens.add({
                     targets: boss,
@@ -2753,6 +2763,10 @@ class Level1Scene extends Phaser.Scene {
                     onComplete: () => {
                         // Level 8: Spawn shield generators once boss is in position
                         if (bossType === 'enemyBossLevel8' && boss && boss.active) {
+                            this.spawnBossShieldGenerators(boss);
+                        }
+                        // Level 10: Spawn shield turrets once flagship is in position
+                        if (bossType === 'enemyBossLevel10' && boss && boss.active) {
                             this.spawnBossShieldGenerators(boss);
                         }
                     }
@@ -2840,7 +2854,8 @@ class Level1Scene extends Phaser.Scene {
 
     spawnBossShieldGenerators(boss) {
         const genConfig = EnemyConfig.shieldGenerator;
-        const count = EnemyConfig.enemyBossLevel8.shieldGeneratorCount || 2;
+        const bossConfig = EnemyConfig[boss.enemyType];
+        const count = (bossConfig && bossConfig.shieldGeneratorCount) || 2;
 
         for (let i = 0; i < count; i++) {
             // Spawn generators on opposite sides of the boss
@@ -2878,22 +2893,26 @@ class Level1Scene extends Phaser.Scene {
         }
 
         this.showSentinelStatus('ENEMY SHIELD GENERATORS DETECTED', '#FF4400');
-        console.log('Level8: Spawned shield generators around boss');
+        console.log(`Level${this.levelNumber}: Spawned shield generators around boss`);
     }
 
     onShieldGeneratorDestroyed(generator) {
-        if (!this.level8Boss || !this.level8Boss.active) return;
+        // Determine which boss owns the shield generators (level 8 or level 10)
+        const boss = (this.level8Boss && this.level8Boss.active) ? this.level8Boss
+                   : (this.level10Boss && this.level10Boss.active) ? this.level10Boss
+                   : null;
+        if (!boss) return;
 
-        this.level8Boss.shieldGeneratorsAlive = (this.level8Boss.shieldGeneratorsAlive || 1) - 1;
+        boss.shieldGeneratorsAlive = (boss.shieldGeneratorsAlive || 1) - 1;
 
-        if (this.level8Boss.shieldGeneratorsAlive <= 0) {
+        if (boss.shieldGeneratorsAlive <= 0) {
             // All generators destroyed - boss shields are now vulnerable
-            this.level8Boss.shieldsBlocked = false;
+            boss.shieldsBlocked = false;
             this.showSentinelStatus('SHIELD GENERATORS DESTROYED — BOSS VULNERABLE!', '#FF0000');
-            console.log('Level8: All shield generators destroyed — boss is now vulnerable');
+            console.log(`Level${this.levelNumber}: All shield generators destroyed — boss is now vulnerable`);
         } else {
             this.showSentinelStatus('SHIELD GENERATOR DESTROYED', '#FFAA00');
-            console.log(`Level8: Shield generator destroyed — ${this.level8Boss.shieldGeneratorsAlive} remaining`);
+            console.log(`Level${this.levelNumber}: Shield generator destroyed — ${boss.shieldGeneratorsAlive} remaining`);
         }
     }
     
