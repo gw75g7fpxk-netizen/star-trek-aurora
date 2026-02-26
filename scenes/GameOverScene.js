@@ -1,164 +1,206 @@
 // Game Over Scene
 class GameOverScene extends Phaser.Scene {
     constructor() {
-        super({ key: 'GameOverScene' });
+        super({ key: 'GameOverScene' })
     }
 
     init(data) {
-        this.finalScore = data.score || 0;
-        this.wave = data.wave || 0;
-        this.podsRescued = data.podsRescued || 0;
-        this.levelNumber = data.levelNumber || 1;
-        this.pointsEarned = data.pointsEarned || 0;
+        this.finalScore   = data.score        || 0
+        this.wave         = data.wave          || 0
+        this.podsRescued  = data.podsRescued   || 0
+        this.levelNumber  = data.levelNumber   || 1
+        this.pointsEarned = data.pointsEarned  || 0
     }
 
     create() {
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-        
-        // Background
-        this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.9);
-        
-        // Responsive font sizing based on screen width
-        // Mobile detection: screens < 600px get scaled fonts (min sizes prevent too-small text)
-        const isMobile = width < 600;
-        const titleFontSize = isMobile ? Math.max(32, width * 0.08) : 64;
-        const subtitleFontSize = isMobile ? Math.max(14, width * 0.035) : 20;
-        const statsFontSize = isMobile ? Math.max(14, width * 0.035) : 20;
-        const buttonFontSize = isMobile ? Math.max(18, width * 0.045) : 28;
-        
-        // LCARS-style title with level info
-        // On mobile, start title at 10% to leave maximum room for stats and buttons below
-        const titleY = isMobile ? height * 0.1 : height / 3;
-        const levelInfo = ProgressConfig.levelInfo[this.levelNumber];
-        const title = this.add.text(width / 2, titleY, 'MISSION FAILED', {
-            fontSize: `${titleFontSize}px`,
-            color: '#FF0000',
-            fontFamily: 'Courier New, monospace',
+        const width  = this.cameras.main.width
+        const height = this.cameras.main.height
+        const isMobile = width < 600 || height < 600
+
+        // ── LCARS background – same nineslice config as MainMenuScene ──
+        const IMAGE_WIDTH          = 1280
+        const IMAGE_HEIGHT         = 876
+        const UPPER_BLACK_BOTTOM_Y = 275
+        const LOWER_BLACK_START_Y  = 490
+        const scale                = width / IMAGE_WIDTH
+        const neededHeight         = Math.max(IMAGE_HEIGHT, Math.ceil(height / scale))
+        this.add.nineslice(
+            0, 0, 'lcars-menu-background', null,
+            IMAGE_WIDTH, neededHeight,
+            0, 0, IMAGE_HEIGHT - 1, 0
+        ).setOrigin(0, 0).setScale(scale)
+
+        const lcarsFont      = 'Antonio, Oswald, Arial Narrow, sans-serif'
+        const lcarsChromePad = Math.round(165 * width / 1280) + 8
+        const contentW       = width - 2 * lcarsChromePad
+        const btnW           = Math.min(Math.round(width * 0.65), 340)
+        const btnLeft        = Math.round(width / 2 - btnW / 2)
+
+        // ── Upper black section: title + level subtitle ──
+        const upperBlackBottom = Math.round(UPPER_BLACK_BOTTOM_Y * scale)
+        const titleSize        = upperBlackBottom > 200 ? '60px' : upperBlackBottom > 120 ? '40px' : '28px'
+        const titleY           = Math.round(upperBlackBottom * 0.50)
+        const subY             = Math.round(titleY + (upperBlackBottom - titleY) * 0.60)
+        const levelInfo        = ProgressConfig.levelInfo[this.levelNumber]
+
+        this.titleEl = this.add.text(btnLeft, titleY, 'MISSION FAILED', {
+            fontSize: titleSize,
+            color: '#FF4444',
+            fontFamily: lcarsFont,
             fontStyle: 'bold'
-        });
-        title.setOrigin(0.5);
-        
-        const subtitleYOffset = isMobile ? 40 : 65;
-        const levelText = this.add.text(width / 2, titleY + subtitleYOffset, `Level ${this.levelNumber}: ${levelInfo.name}`, {
-            fontSize: `${subtitleFontSize}px`,
+        }).setOrigin(0, 0.5)
+
+        this.subEl = this.add.text(btnLeft, subY, `LEVEL ${this.levelNumber}: ${levelInfo.name}`, {
+            fontSize: isMobile ? '13px' : '15px',
+            color: '#FF9900',
+            fontFamily: lcarsFont
+        }).setOrigin(0, 0.5)
+
+        // ── Lower black section: stats + buttons ──
+        const lowerBlackStart = Math.round(LOWER_BLACK_START_Y * scale)
+        const availH          = height - lowerBlackStart
+
+        // Layout modes based on available height
+        const minimal = availH < 160
+        const compact = !minimal && availH < 250
+
+        const topPad    = minimal ? 6  : compact ? 8  : isMobile ? 12 : 18
+        const innerPad  = minimal ? 4  : compact ? 5  : isMobile ? 9  : 12
+        const lineGap   = minimal ? 2  : compact ? 3  : isMobile ? 6  : 7
+        const scoreSize = minimal ? 16 : compact ? 19 : isMobile ? 21 : 25
+        const statSize  = minimal ? 10 : compact ? 11 : isMobile ? 13 : 14
+        const btnH      = minimal ? 28 : compact ? 32 : isMobile ? 40 : 44
+        const btnGap    = minimal ? 4  : compact ? 5  : isMobile ? 8  : 10
+
+        // Stats panel height: innerPad×2 + score + [hscore + wave/pods in non-minimal] + credits
+        const panelH = innerPad * 2 + scoreSize + lineGap
+            + (minimal ? 0 : statSize + lineGap)
+            + (minimal ? 0 : statSize + lineGap)
+            + statSize
+
+        const statsY = lowerBlackStart + topPad
+
+        // Stats panel background
+        this.panelBg = this.add.graphics()
+        this.panelBg.fillStyle(0x080818, 0.88)
+        this.panelBg.fillRoundedRect(lcarsChromePad, statsY, contentW, panelH, 6)
+        this.panelBg.lineStyle(1, 0xFF4444, 0.50)
+        this.panelBg.strokeRoundedRect(lcarsChromePad, statsY, contentW, panelH, 6)
+
+        const highScore = this.getHighScore()
+        let cy = statsY + innerPad
+
+        this.scoreEl = this.add.text(width / 2, cy, `FINAL SCORE: ${this.finalScore}`, {
+            fontSize: `${scoreSize}px`,
             color: '#FFFF00',
-            fontFamily: 'Courier New, monospace'
-        });
-        levelText.setOrigin(0.5);
-        
-        // Get high score
-        const highScore = this.getHighScore();
-        
-        // Stats with LCARS border - responsive panel width and position
-        const statsY = isMobile ? height * 0.32 : height / 2;
-        const statsPanel = this.add.graphics();
-        statsPanel.lineStyle(3, 0xFF0000, 1);
-        const panelWidth = Math.min(440, width * 0.85);
-        const panelHeight = isMobile ? 200 : 220;
-        statsPanel.strokeRect(width / 2 - panelWidth / 2, statsY - 20, panelWidth, panelHeight);
-        
-        this.add.text(width / 2, statsY, `FINAL SCORE: ${this.finalScore}`, {
-            fontSize: `${statsFontSize + 4}px`,
-            color: '#FFFF00',
-            fontFamily: 'Courier New, monospace',
+            fontFamily: lcarsFont,
             fontStyle: 'bold'
-        }).setOrigin(0.5);
-        
-        this.add.text(width / 2, statsY + 40, `HIGH SCORE: ${highScore}`, {
-            fontSize: `${statsFontSize}px`,
-            color: '#FFD700',
-            fontFamily: 'Courier New, monospace'
-        }).setOrigin(0.5);
-        
-        this.add.text(width / 2, statsY + 80, `WAVE REACHED: ${this.wave}`, {
-            fontSize: `${statsFontSize}px`,
-            color: '#FFFFFF',
-            fontFamily: 'Courier New, monospace'
-        }).setOrigin(0.5);
-        
-        this.add.text(width / 2, statsY + 120, `PODS RESCUED: ${this.podsRescued}`, {
-            fontSize: `${statsFontSize}px`,
-            color: '#00FFFF',
-            fontFamily: 'Courier New, monospace'
-        }).setOrigin(0.5);
-        
-        // Display credits earned (roguelite progression!)
-        const creditsY = statsY + 160; // Positioned below pods rescued
-        this.add.text(width / 2, creditsY, `CREDITS EARNED: +${this.pointsEarned}`, {
-            fontSize: `${statsFontSize}px`,
-            color: '#00FF00',
-            fontFamily: 'Courier New, monospace',
+        }).setOrigin(0.5, 0)
+        cy += scoreSize + lineGap
+
+        this.hsEl    = null
+        this.statsEl = null
+        if (!minimal) {
+            this.hsEl = this.add.text(width / 2, cy, `HIGH SCORE: ${highScore}`, {
+                fontSize: `${statSize}px`,
+                color: '#FFD700',
+                fontFamily: lcarsFont
+            }).setOrigin(0.5, 0)
+            cy += statSize + lineGap
+
+            this.statsEl = this.add.text(width / 2, cy,
+                `WAVE REACHED: ${this.wave}   PODS RESCUED: ${this.podsRescued}`, {
+                    fontSize: `${statSize}px`,
+                    color: '#AACCFF',
+                    fontFamily: lcarsFont
+                }).setOrigin(0.5, 0)
+            cy += statSize + lineGap
+        }
+
+        this.creditsEl = this.add.text(width / 2, cy, `CREDITS EARNED: +${this.pointsEarned}`, {
+            fontSize: `${statSize}px`,
+            color: '#00FF88',
+            fontFamily: lcarsFont,
             fontStyle: 'bold'
-        }).setOrigin(0.5);
-        
-        // Navigation buttons - on mobile, always place below stats panel within safe area (~76% of height)
-        const buttonY = isMobile ? Math.min(statsY + panelHeight + 25, height * 0.76) : height * 0.75;
-        const buttonSpacing = isMobile ? Math.round(height * 0.07) : 60;
-        
-        // Restart button
-        const restartButton = this.add.text(width / 2, buttonY, '[ RETRY MISSION ]', {
-            fontSize: `${buttonFontSize}px`,
-            color: '#00FF00',
-            fontFamily: 'Courier New, monospace',
-            fontStyle: 'bold'
-        });
-        restartButton.setOrigin(0.5);
-        restartButton.setInteractive();
-        
-        restartButton.on('pointerdown', () => {
-            this.sound.play('button-click');
-            this.scene.start('Level1Scene', { levelNumber: this.levelNumber });
-        });
-        
-        restartButton.on('pointerover', () => {
-            restartButton.setColor('#00FFFF');
-            restartButton.setScale(1.05);
-        });
-        
-        restartButton.on('pointerout', () => {
-            restartButton.setColor('#00FF00');
-            restartButton.setScale(1.0);
-        });
-        
-        // Return to Menu button
-        const menuButton = this.add.text(width / 2, buttonY + buttonSpacing, '[ RETURN TO MENU ]', {
-            fontSize: `${buttonFontSize - 4}px`,
-            color: '#888888',
-            fontFamily: 'Courier New, monospace'
-        });
-        menuButton.setOrigin(0.5);
-        menuButton.setInteractive();
-        
-        menuButton.on('pointerdown', () => {
-            this.sound.play('button-click');
-            this.scene.start('MainMenuScene');
-        });
-        
-        menuButton.on('pointerover', () => {
-            menuButton.setColor('#00FFFF');
-        });
-        
-        menuButton.on('pointerout', () => {
-            menuButton.setColor('#888888');
-        });
-        
+        }).setOrigin(0.5, 0)
+
+        // ── Buttons ──
+        this.buttons = []
+        let btnY = statsY + panelH + btnGap
+
+        this.retryBtn = this.createLcarsButton(
+            width / 2, btnY, btnW, btnH, 8, lcarsFont,
+            'RETRY MISSION', 0xFF9900, '#000000',
+            () => { this.scene.start('Level1Scene', { levelNumber: this.levelNumber }) }
+        )
+        this.buttons.push(this.retryBtn)
+        btnY += btnH + btnGap
+
+        this.menuBtn = this.createLcarsButton(
+            width / 2, btnY, btnW, btnH, 8, lcarsFont,
+            'RETURN TO MENU', 0x333355, '#FFFFFF',
+            () => { this.scene.start('MainMenuScene') }
+        )
+        this.buttons.push(this.menuBtn)
+
         // Keyboard shortcuts
         this.input.keyboard.once('keydown-SPACE', () => {
-            this.scene.start('Level1Scene', { levelNumber: this.levelNumber });
-        });
-        
+            this.scene.start('Level1Scene', { levelNumber: this.levelNumber })
+        })
         this.input.keyboard.once('keydown-M', () => {
-            this.scene.start('MainMenuScene');
-        });
+            this.scene.start('MainMenuScene')
+        })
+
+        this.performFadeIn()
     }
-    
+
+    createLcarsButton(x, y, btnWidth, btnHeight, radius, fontFamily, label, fillColor, textColor, onPress) {
+        const bg = this.add.graphics()
+        const drawBg = (alpha) => {
+            bg.clear()
+            bg.fillStyle(fillColor, alpha)
+            bg.fillRoundedRect(x - btnWidth / 2, y, btnWidth, btnHeight, radius)
+        }
+        drawBg(1)
+
+        const btnFontSize = btnHeight > 38 ? '17px' : '13px'
+        const text = this.add.text(x, y + btnHeight / 2, label, {
+            fontSize: btnFontSize,
+            color: textColor,
+            fontFamily: fontFamily,
+            fontStyle: 'bold'
+        }).setOrigin(0.5)
+
+        const zone = this.add.zone(x, y + btnHeight / 2, btnWidth, btnHeight).setInteractive()
+        zone.on('pointerdown', () => { this.sound.play('button-click'); onPress() })
+        zone.on('pointerover', () => { drawBg(0.7); text.setScale(1.04) })
+        zone.on('pointerout',  () => { drawBg(1);   text.setScale(1.0)  })
+
+        return { bg, text, zone }
+    }
+
+    performFadeIn() {
+        const panelGroup = [this.panelBg, this.scoreEl, this.creditsEl]
+        if (this.hsEl)    panelGroup.push(this.hsEl)
+        if (this.statsEl) panelGroup.push(this.statsEl)
+
+        const groups = [
+            [this.titleEl, this.subEl],
+            panelGroup,
+            ...this.buttons.map(b => [b.bg, b.text])
+        ]
+        groups.forEach((group, i) => {
+            group.forEach(el => el.setAlpha(0))
+            this.tweens.add({ targets: group, alpha: 1, duration: 400, delay: i * 150, ease: 'Linear' })
+        })
+    }
+
     getHighScore() {
         try {
-            const saved = localStorage.getItem('starTrekAdventuresHighScore');
-            return saved ? parseInt(saved, 10) : 0;
+            const saved = localStorage.getItem('starTrekAdventuresHighScore')
+            return saved ? parseInt(saved, 10) : 0
         } catch (e) {
-            return 0;
+            return 0
         }
     }
 }
