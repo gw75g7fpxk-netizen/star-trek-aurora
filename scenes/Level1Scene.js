@@ -2871,7 +2871,6 @@ class Level1Scene extends Phaser.Scene {
         if (this.level8Boss.shieldGeneratorsAlive <= 0) {
             // All generators destroyed - boss shields are now vulnerable
             this.level8Boss.shieldsBlocked = false;
-            this.level8Boss.shields = 0;
             this.showSentinelStatus('SHIELD GENERATORS DESTROYED — BOSS VULNERABLE!', '#FF0000');
             console.log('Level8: All shield generators destroyed — boss is now vulnerable');
         } else {
