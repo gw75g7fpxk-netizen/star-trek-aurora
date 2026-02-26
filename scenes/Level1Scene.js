@@ -92,7 +92,7 @@ const PLAYER_HEALTH_BAR = {
 };
 
 // Boss-type enemies that get special explosion effects
-const BOSS_TYPE_ENEMIES = ['boss', 'enemyBossLevel1', 'enemyBossLevel2', 'enemyBossLevel3', 'enemyBossLevel4', 'enemyBossLevel5', 'battleship', 'romulanWarbird'];
+const BOSS_TYPE_ENEMIES = ['boss', 'enemyBossLevel1', 'enemyBossLevel2', 'enemyBossLevel3', 'enemyBossLevel4', 'enemyBossLevel5', 'enemyBossLevel8', 'battleship', 'romulanWarbird'];
 
 // Romulan Warbird cloaking constants for Level 7
 const WARBIRD_CLOAK_FADE_DURATION = 2000; // Milliseconds for fade-in/out during cloaking
@@ -102,6 +102,10 @@ const WARBIRD_INITIAL_DECLOAK_DELAY = 750; // Milliseconds after spawn before th
 const WARBIRD_SPAWN_BOTTOM_MARGIN = 20;   // Pixels between bottom of warbird sprite and visible screen edge at spawn
 const WARBIRD_VIEWPORT_SAFE_PX = 90;     // Minimum px clearance from canvas bottom on mobile devices:
                                          //   iOS Safari toolbar (~44px) + home indicator (~34px) + margin
+
+// Shield generator orbit constants for Level 8
+const SHIELD_GENERATOR_ORBIT_RADIUS = 90; // Orbit radius around the Level 8 boss (in pixels)
+const SHIELD_GENERATOR_ORBIT_SPEED = 0.02; // Orbit angular speed in radians per frame
 
 // USS Sentinel constants for Level 5
 const SENTINEL_Y_FRACTION = 0.85; // Y position as fraction of screen height
@@ -250,6 +254,9 @@ class Level1Scene extends Phaser.Scene {
         this.warbirdCloakCount = 0;        // How many times the warbird has cloaked
         this.warbirdCloakWaveActive = false; // True while a cloak-wave is in progress
         
+        // Level 8: Shield generator tracking
+        this.level8Boss = null; // Reference to the Level 8 boss with shield generators
+        
         // Store camera dimensions for responsive layout
         this.updateCameraDimensions();
         
@@ -337,8 +344,8 @@ class Level1Scene extends Phaser.Scene {
         // Initialize shield recharge timer to current time
         this.lastShieldRecharge = this.time.now;
         
-        // Level 5: Spawn the USS Sentinel at the bottom of the screen
-        if (this.levelNumber === 5) {
+        // Level 5 & 8: Spawn the USS Sentinel at the bottom of the screen
+        if (this.levelNumber === 5 || this.levelNumber === 8) {
             this.createSentinel();
         }
         
@@ -1221,8 +1228,8 @@ class Level1Scene extends Phaser.Scene {
         // Update torpedo button charge ring
         this.updateTorpedoButton(time);
         
-        // Update USS Sentinel (Level 5)
-        if (this.levelNumber === 5 && this.sentinel && this.sentinel.active) {
+        // Update USS Sentinel (Level 5 & 8)
+        if ((this.levelNumber === 5 || this.levelNumber === 8) && this.sentinel && this.sentinel.active) {
             this.updateSentinel(time);
         }
         
@@ -1748,6 +1755,13 @@ class Level1Scene extends Phaser.Scene {
             damage = bullet.damage // Torpedoes use configured damage value
         }
         
+        // Level 8: shield generators protect boss shields - deflect shots until generators are destroyed
+        if (enemy.shieldsBlocked && enemy.shields > 0) {
+            this.showShieldImpactAt(enemy.x, enemy.y);
+            enemy.invincibleUntil = this.time.now + INVINCIBILITY_DURATION.enemy;
+            return; // Shot deflected - no damage dealt
+        }
+        
         // Apply damage to shields first, then health
         if (enemy.shields > 0) {
             // Show shield impact effect
@@ -1815,6 +1829,13 @@ class Level1Scene extends Phaser.Scene {
         this.disableBulletPhysics(torpedo);
         
         const damage = torpedo.damage || PlayerConfig.torpedoDamage;
+        
+        // Level 8: shield generators protect boss shields - deflect torpedoes until generators are destroyed
+        if (enemy.shieldsBlocked && enemy.shields > 0) {
+            this.showShieldImpactAt(enemy.x, enemy.y);
+            enemy.invincibleUntil = this.time.now + INVINCIBILITY_DURATION.enemy;
+            return; // Torpedo deflected - no damage dealt
+        }
         
         // Apply damage to shields first, then health
         if (enemy.shields > 0) {
@@ -1928,6 +1949,11 @@ class Level1Scene extends Phaser.Scene {
             // Chance to drop power-up
             if (Math.random() < PowerUpConfig.spawnChance) {
                 this.spawnPowerUp(enemy.x, enemy.y);
+            }
+            
+            // Level 8: notify the boss when a shield generator is destroyed
+            if (enemy.enemyType === 'shieldGenerator') {
+                this.onShieldGeneratorDestroyed(enemy);
             }
             
             enemy.setActive(false);
@@ -2364,8 +2390,7 @@ class Level1Scene extends Phaser.Scene {
         // Level 5: Update Sentinel systems based on current wave
         if (this.levelNumber === 5) {
             this.updateSentinelSystems();
-        }
-        
+        }        
         // Initialize wave spawn pool based on shipCounts
         this.waveSpawnPool = [];
         if (waveConfig.shipCounts) {
@@ -2694,12 +2719,25 @@ class Level1Scene extends Phaser.Scene {
                 // Create health bar for boss
                 this.createHealthBar(boss);
                 
+                // Level 8: Set up shield generators for this boss after it enters the screen
+                if (bossType === 'enemyBossLevel8') {
+                    boss.shieldGeneratorsAlive = config.shieldGeneratorCount || 2;
+                    boss.shieldsBlocked = true;
+                    this.level8Boss = boss;
+                }
+                
                 // Move boss into position with tween animation
                 this.tweens.add({
                     targets: boss,
                     y: 150,
                     duration: 3000,
-                    ease: 'Power2'
+                    ease: 'Power2',
+                    onComplete: () => {
+                        // Level 8: Spawn shield generators once boss is in position
+                        if (bossType === 'enemyBossLevel8' && boss && boss.active) {
+                            this.spawnBossShieldGenerators(boss);
+                        }
+                    }
                 });
             }
         }
@@ -2776,6 +2814,70 @@ class Level1Scene extends Phaser.Scene {
             yoyo: true,
             repeat: 5
         });
+    }
+
+    // ========================================
+    // SHIELD GENERATOR SYSTEM (Level 8)
+    // ========================================
+
+    spawnBossShieldGenerators(boss) {
+        const genConfig = EnemyConfig.shieldGenerator;
+        const count = EnemyConfig.enemyBossLevel8.shieldGeneratorCount || 2;
+
+        for (let i = 0; i < count; i++) {
+            // Spawn generators on opposite sides of the boss
+            const startAngle = (i / count) * Math.PI * 2;
+            const spawnX = boss.x + Math.cos(startAngle) * SHIELD_GENERATOR_ORBIT_RADIUS;
+            const spawnY = boss.y + Math.sin(startAngle) * SHIELD_GENERATOR_ORBIT_RADIUS;
+
+            const gen = this.enemies.get(spawnX, spawnY, genConfig.texture);
+            if (!gen) continue;
+
+            gen.setActive(true);
+            gen.setVisible(true);
+            gen.enemyType = 'shieldGenerator';
+            gen.health = genConfig.health;
+            gen.shields = genConfig.shields;
+            gen.points = genConfig.points;
+            gen.fireRate = genConfig.fireRate;
+            gen.lastFired = 0;
+            gen.invincibleUntil = 0;
+            gen.movementPattern = 'orbit';
+            gen.orbitTarget = boss;
+            gen.orbitAngle = startAngle;
+            gen.hasEnteredScreen = true;
+            gen.initialSpeed = 0;
+
+            if (gen.width > 0) {
+                const scale = genConfig.size.width / gen.width;
+                gen.setScale(scale);
+            }
+
+            gen.body.setVelocity(0, 0);
+            gen.body.checkCollision.none = false;
+
+            this.createHealthBar(gen);
+        }
+
+        this.showSentinelStatus('ENEMY SHIELD GENERATORS DETECTED', '#FF4400');
+        console.log('Level8: Spawned shield generators around boss');
+    }
+
+    onShieldGeneratorDestroyed(generator) {
+        if (!this.level8Boss || !this.level8Boss.active) return;
+
+        this.level8Boss.shieldGeneratorsAlive = (this.level8Boss.shieldGeneratorsAlive || 1) - 1;
+
+        if (this.level8Boss.shieldGeneratorsAlive <= 0) {
+            // All generators destroyed - boss shields are now vulnerable
+            this.level8Boss.shieldsBlocked = false;
+            this.level8Boss.shields = 0;
+            this.showSentinelStatus('SHIELD GENERATORS DESTROYED — BOSS VULNERABLE!', '#FF0000');
+            console.log('Level8: All shield generators destroyed — boss is now vulnerable');
+        } else {
+            this.showSentinelStatus('SHIELD GENERATOR DESTROYED', '#FFAA00');
+            console.log(`Level8: Shield generator destroyed — ${this.level8Boss.shieldGeneratorsAlive} remaining`);
+        }
     }
     
     // ========================================
@@ -3010,8 +3112,8 @@ class Level1Scene extends Phaser.Scene {
             maxHealth: SENTINEL_HEALTH,
             shields: SENTINEL_SHIELDS,
             maxShields: SENTINEL_SHIELDS,
-            weaponsOnline: false, // Primary weapons offline until wave 3
-            torpedosOnline: false, // Torpedo systems offline until wave 5
+            weaponsOnline: this.levelNumber === 8, // Level 8: Sentinel starts fully armed
+            torpedosOnline: this.levelNumber === 8, // Level 8: Sentinel starts fully armed
             lastBeamFired: 0,
             lastTorpedoFired: -PlayerConfig.torpedoCooldown, // Ready to fire immediately when online
             invincibleUntil: 0, // Timestamp for invincibility after taking damage
@@ -3024,9 +3126,11 @@ class Level1Scene extends Phaser.Scene {
         this.updateSentinelBars();
         
         // Status label displayed above the Sentinel
-        this.sentinelStatusLabel = this.add.text(sentinelX, sentinelY - SENTINEL_STATUS_LABEL_OFFSET, 'USS SENTINEL [DAMAGED]', {
+        const sentinelInitLabel = this.levelNumber === 8 ? 'USS SENTINEL [COMBAT READY]' : 'USS SENTINEL [DAMAGED]';
+        const sentinelInitColor = this.levelNumber === 8 ? '#00FF00' : '#FF6666';
+        this.sentinelStatusLabel = this.add.text(sentinelX, sentinelY - SENTINEL_STATUS_LABEL_OFFSET, sentinelInitLabel, {
             fontSize: '11px',
-            color: '#FF6666',
+            color: sentinelInitColor,
             fontFamily: 'Courier New, monospace',
             fontStyle: 'bold'
         });
@@ -3036,7 +3140,7 @@ class Level1Scene extends Phaser.Scene {
         // Enemy bullets can pass through the player and hit the Sentinel below
         this.physics.add.overlap(this.sentinel, this.enemyBullets, this.sentinelHit, null, this);
         
-        console.log('Level5: USS Sentinel spawned at bottom of screen');
+        console.log(`Level${this.levelNumber}: USS Sentinel spawned at bottom of screen`);
     }
     
     updateSentinel(time) {
@@ -3211,6 +3315,13 @@ class Level1Scene extends Phaser.Scene {
         if (enemy.enemyType === 'asteroid') return;
         if (this.time.now < (enemy.invincibleUntil || 0)) return;
 
+        // Level 8: shield generators protect boss shields - beam is deflected until generators are destroyed
+        if (enemy.shieldsBlocked && enemy.shields > 0) {
+            this.showShieldImpactAt(enemy.x, enemy.y);
+            enemy.invincibleUntil = this.time.now + INVINCIBILITY_DURATION.enemy;
+            return; // Beam deflected - no damage dealt
+        }
+
         if (enemy.shields > 0) {
             this.showShieldImpactAt(enemy.x, enemy.y);
             enemy.shields -= damage;
@@ -3297,7 +3408,7 @@ class Level1Scene extends Phaser.Scene {
             this.sentinelStatusLabel.setText('USS SENTINEL: DESTROYED');
             this.sentinelStatusLabel.setColor('#FF0000');
         }
-        console.log('Level5: USS Sentinel has been destroyed — mission failure!');
+        console.log(`Level${this.levelNumber}: USS Sentinel has been destroyed — mission failure!`);
         // Sentinel destruction is a mission failure — trigger game over after a brief pause
         this.time.delayedCall(1500, () => {
             this.gameOver();
@@ -3852,6 +3963,20 @@ class Level1Scene extends Phaser.Scene {
                 // Lock Y to the visible-area-relative position each frame so the warbird
                 // tracks any visualViewport changes (e.g. toolbar showing/hiding on iOS Safari).
                 enemy.y = this.getWarbirdY(enemy);
+                break;
+            }
+            case 'orbit': {
+                // Orbit around a target (used by Level 8 shield generators)
+                if (enemy.orbitTarget && enemy.orbitTarget.active) {
+                    enemy.orbitAngle = (enemy.orbitAngle || 0) + SHIELD_GENERATOR_ORBIT_SPEED;
+                    const newX = enemy.orbitTarget.x + Math.cos(enemy.orbitAngle) * SHIELD_GENERATOR_ORBIT_RADIUS;
+                    const newY = enemy.orbitTarget.y + Math.sin(enemy.orbitAngle) * SHIELD_GENERATOR_ORBIT_RADIUS;
+                    enemy.body.reset(newX, newY);
+                } else if (enemy.orbitTarget && !enemy.orbitTarget.active) {
+                    // Boss was destroyed - fall straight down
+                    enemy.movementPattern = 'straight';
+                    enemy.body.setVelocity(0, DEFAULT_VERTICAL_SCROLL_SPEED);
+                }
                 break;
             }
         }

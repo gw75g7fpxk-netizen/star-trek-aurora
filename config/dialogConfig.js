@@ -358,6 +358,69 @@ const DialogConfig = {
                     }
                 ]
             }
+        },
+
+        // Level 8: Federation Counterstrike - Assault the Crystalis staging ground with the USS Sentinel
+        8: {
+            intro: {
+                title: 'INCOMING TRANSMISSION',
+                sequence: [
+                    {
+                        speaker: 'Admiral Holt',
+                        ship: 'Starbase 47',
+                        portrait: 'starfleetCommand',
+                        text: 'Aurora, Starfleet reinforcements have arrived. The USS Sentinel has been fully repaired and rearmed. It is time to take the fight to the Crystalis.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Dray',
+                        ship: 'USS Sentinel',
+                        portrait: 'ussSentinel',
+                        text: 'Aurora, this is Sentinel. Glad to be back in fighting shape. We\'re moving to assault the Crystalis staging ground. Form up on my wing.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Commander T\'Vorin',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Captain, sensors detect a heavily fortified Crystalis position ahead. A battleship enforcer is protecting the staging ground with shield generator sub-systems.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Sentinel, Aurora is with you. Destroy the shield generators to bring that enforcer down. All hands to battle stations — for the Federation!',
+                        audio: null
+                    }
+                ]
+            },
+            outro: {
+                title: 'INCOMING TRANSMISSION',
+                sequence: [
+                    {
+                        speaker: 'Lieutenant Solis',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'The battleship enforcer is down! Their shield generators are offline. The Crystalis staging ground has been neutralized!',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Dray',
+                        ship: 'USS Sentinel',
+                        portrait: 'ussSentinel',
+                        text: 'Excellent coordination, Aurora. Together we\'ve broken through their defenses. The Federation has regained the initiative.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Begin recovery operations on all rescue pods. Aurora and Sentinel standing by for next orders. We\'re not done yet.',
+                        audio: null
+                    }
+                ]
+            }
         }
     },
     

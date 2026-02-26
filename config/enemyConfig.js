@@ -255,5 +255,39 @@ const EnemyConfig = {
         texture: 'romulan-warbird',
         spawnAtBottom: true, // Spawns at bottom of screen behind the Aurora
         startAngle: Math.PI  // Rotated 180 degrees to face upward (toward Aurora)
+    },
+
+    // Shield Generator - Orbits the Level 8 boss and protects its shields from damage
+    shieldGenerator: {
+        health: 40,
+        shields: 40,
+        speed: 0,
+        fireRate: 4000,
+        bulletSpeed: 220,
+        damage: 1,
+        points: 800,
+        movementPattern: 'orbit',
+        size: { width: 35, height: 35 },
+        texture: 'weapon-platform'
+    },
+
+    // Federation Counterstrike Boss - Level 8 Boss (Battleship enforcer with shield generators)
+    enemyBossLevel8: {
+        health: 400,
+        shields: 200,
+        speed: 35,
+        fireRate: 1000,
+        bulletSpeed: 240,
+        damage: 2,
+        movementPattern: 'horizontal',
+        burstCount: 4,
+        burstDelay: 150,
+        spreadShot: true,
+        spreadCount: 5,
+        size: { width: 170, height: 170 },
+        points: 8000,
+        texture: 'enemy-boss-level-3',
+        hasShieldGenerators: true,
+        shieldGeneratorCount: 2
     }
 };
