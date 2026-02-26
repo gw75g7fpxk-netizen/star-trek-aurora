@@ -80,6 +80,7 @@ const DialogConfig = {
         escapePod: 'escape-pod',             // Federation escape pod
         ussSentinel: 'uss-sentinel',         // USS Sentinel (reinforcement flagship)
         starfleetCommand: 'starfleet-command', // Starfleet Command
+        romulanWarbird: 'romulan-warbird',   // Romulan Warbird Thar'Khul
         
         // For future use with custom portrait assets
         // captain: 'captain-portrait',
@@ -297,6 +298,139 @@ const DialogConfig = {
             }
         },
 
+        // Level 4: Fractured Nexus - Weapon platforms, minefields, and convoy rescue
+        4: {
+            intro: {
+                title: 'INCOMING TRANSMISSION',
+                sequence: [
+                    {
+                        speaker: 'Lieutenant Solis',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'The Sentinel and the reinforcements have gone to pursue the fleeing Crystalis. We\'re falling behind — hull repairs still aren\'t finished.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Commander T\'Vorin',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Structural integrity is restored to 87%, Captain. We should be fully operational within minutes.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Lieutenant Solis',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Captain! Priority distress call from a Federation resupply convoy — they\'re caught in a Crystalis trap. Weapon platforms and minefields everywhere.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Set course immediately. Aurora may be running alone, but we\'re not leaving that convoy out there. All hands to battle stations.',
+                        audio: null
+                    }
+                ]
+            },
+            outro: {
+                title: 'INCOMING TRANSMISSION',
+                sequence: [
+                    {
+                        speaker: 'Lieutenant Solis',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'The boss is down! All fragments neutralized. Their weapons network is offline.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Commander T\'Vorin',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'The resupply convoy has been secured, Captain. All vessels are reporting minimal damage.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Signal the convoy to proceed on its way. Helm, set course to rejoin the Sentinel. We need to reconnect with the fleet.',
+                        audio: null
+                    }
+                ]
+            }
+        },
+
+        // Level 5: Guardian Protocol - Escort the crippled USS Sentinel through Crystalis swarms
+        5: {
+            intro: {
+                title: 'INCOMING TRANSMISSION',
+                sequence: [
+                    {
+                        speaker: 'Commander T\'Vorin',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Captain, we are picking up a distress signal from the Sentinel. They have struck a minefield — analysis confirms Romulan origin.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Dray',
+                        ship: 'USS Sentinel',
+                        portrait: 'ussSentinel',
+                        text: 'Aurora, this is Sentinel! We\'ve lost shields and weapons. Crystalis swarms are closing in fast — we can\'t hold them off!',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Sentinel, Aurora is on her way. We\'ll cover you until your systems are back online. Tactical — use our shields to protect them. Move!',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Lieutenant Solis',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Captain, these mines are locked onto warp signatures. We\'ll need to destroy them before they close on the Sentinel\'s warp core.',
+                        audio: null
+                    }
+                ]
+            },
+            outro: {
+                title: 'INCOMING TRANSMISSION',
+                sequence: [
+                    {
+                        speaker: 'Lieutenant Solis',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'The crystal swarm is breaking off! The multi-phase boss has been neutralized. Sentinel is secure!',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Dray',
+                        ship: 'USS Sentinel',
+                        portrait: 'ussSentinel',
+                        text: 'Aurora... shields and weapons are fully restored. You\'ve bought us the time we needed. We owe you one.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Commander T\'Vorin',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Captain, the minefield was designed to destroy both ships simultaneously. This has Romulan Intelligence written all over it.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Log everything and transmit it to Starfleet Intelligence. Sentinel — form up on our wing. Something larger is at play here.',
+                        audio: null
+                    }
+                ]
+            }
+        },
+
         // Level 6: Resonant Swarm - Synchronized crystal formations with convoy rescue
         6: {
             intro: {
@@ -354,6 +488,76 @@ const DialogConfig = {
                         ship: 'USS Aurora',
                         portrait: 'playerShip',
                         text: 'Supply convoy pods are secure. Helm, get us clear of the debris field. We need to report these new tactics to Starfleet.',
+                        audio: null
+                    }
+                ]
+            }
+        },
+
+        // Level 7: Romulan Shadows - Romulan warbird decloaks and pursues the Aurora
+        7: {
+            intro: {
+                title: 'INCOMING TRANSMISSION',
+                sequence: [
+                    {
+                        speaker: 'Lieutenant Solis',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Captain! Energy spike — decloak signature! A Romulan warbird is dropping out of cloak directly behind us!',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Commander T\'Khara',
+                        ship: 'Thar\'Khul',
+                        portrait: 'romulanWarbird',
+                        text: 'Aurora, you have interfered in Romulan affairs for the last time. The Crystalis were our leverage against the Federation. Your meddling ends here.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Commander T\'Vorin',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Their disruptors are charged and targeting us. Romulan fighters are launching from the warbird\'s wings. They are moving to cut off our escape vectors.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Evasive maneuvers! All power to engines and aft shields. We can\'t fight that warbird head-on — we need to find a way to destroy its cloaking matrix.',
+                        audio: null
+                    }
+                ]
+            },
+            outro: {
+                title: 'INCOMING TRANSMISSION',
+                sequence: [
+                    {
+                        speaker: 'Lieutenant Solis',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'The cloaking matrix is offline! The warbird is fully exposed and taking heavy damage — they\'re breaking off!',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Commander T\'Khara',
+                        ship: 'Thar\'Khul',
+                        portrait: 'romulanWarbird',
+                        text: 'You have made an enemy this day, Aurora. This is not over.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Commander T\'Vorin',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'The Thar\'Khul is retreating at maximum warp. Crystalis fighters are scattering without their coordination signal. The immediate threat has passed.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Log this encounter and transmit it to Starfleet Command. The Romulans were exploiting the Crystalis conflict to weaken our position. That changes our tactical picture considerably.',
                         audio: null
                     }
                 ]
