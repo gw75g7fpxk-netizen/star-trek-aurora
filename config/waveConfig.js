@@ -370,14 +370,51 @@ const WaveConfig = {
             type: 'enemyBossLevel8'
         }
     },
+    // Level 9: Harbinger's Wake - Proto-entity home planet with reality-warping enemies
     level9: {
-        wave1: { 
-            enemyCount: 5, 
-            enemyTypes: ['fighter'],
-            shipCounts: { fighter: 5 },
-            spawnRate: 2000, 
-            difficulty: 1,
-            duration: 20000
+        wave1: {
+            enemyCount: 14,
+            enemyTypes: ['fighter', 'cruiser', 'harbingerGuardian'],
+            shipCounts: { fighter: 8, cruiser: 4, harbingerGuardian: 2 },
+            spawnRate: 1800,
+            difficulty: 2.0,
+            duration: 26000
+        },
+        wave2: {
+            enemyCount: 18,
+            enemyTypes: ['fighter', 'cruiser', 'destroyer', 'harbingerGuardian'],
+            shipCounts: { fighter: 8, cruiser: 5, destroyer: 3, harbingerGuardian: 2 },
+            spawnRate: 1600,
+            difficulty: 2.5,
+            duration: 30000
+        },
+        wave3: {
+            enemyCount: 22,
+            enemyTypes: ['fighter', 'cruiser', 'destroyer', 'battleship', 'harbingerGuardian'],
+            shipCounts: { fighter: 7, cruiser: 5, destroyer: 4, battleship: 2, harbingerGuardian: 4 },
+            spawnRate: 1400,
+            difficulty: 3.0,
+            duration: 34000
+        },
+        wave4: {
+            enemyCount: 26,
+            enemyTypes: ['cruiser', 'destroyer', 'battleship', 'harbingerGuardian'],
+            shipCounts: { cruiser: 8, destroyer: 6, battleship: 5, harbingerGuardian: 7 },
+            spawnRate: 1200,
+            difficulty: 3.5,
+            duration: 38000
+        },
+        wave5: {
+            enemyCount: 30,
+            enemyTypes: ['cruiser', 'destroyer', 'battleship', 'harbingerGuardian'],
+            shipCounts: { cruiser: 8, destroyer: 8, battleship: 8, harbingerGuardian: 6 },
+            spawnRate: 1000,
+            difficulty: 4.0,
+            duration: 42000
+        },
+        bossWave: {
+            threshold: 5, // Boss appears after wave 5
+            type: 'enemyBossLevel9'
         }
     },
     level10: {
