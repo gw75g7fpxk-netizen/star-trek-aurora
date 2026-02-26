@@ -421,6 +421,69 @@ const DialogConfig = {
                     }
                 ]
             }
+        },
+
+        // Level 9: Harbinger's Wake - Proto-entity home planet with reality-warping waves
+        9: {
+            intro: {
+                title: 'INCOMING TRANSMISSION',
+                sequence: [
+                    {
+                        speaker: 'Commander T\'Vorin',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Captain, we have traced the Crystalis fleet back to its point of origin — a planet unlike anything in our records. Sensors are detecting massive energy pulses emanating from the surface.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Lieutenant Solis',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'It\'s a proto-entity, Captain. The planet itself appears to be awakening. The pulses are destabilizing local space — our targeting sensors are going haywire.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Admiral Holt',
+                        ship: 'Starbase 47',
+                        portrait: 'starfleetCommand',
+                        text: 'Aurora, there is a Federation outpost in that system. They have been attempting to evacuate but the Crystalis have them pinned down. Get those people out.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Understood. The reality distortions will make this difficult, but we\'re not leaving anyone behind. All hands, stay sharp — the rules of engagement have changed.',
+                        audio: null
+                    }
+                ]
+            },
+            outro: {
+                title: 'INCOMING TRANSMISSION',
+                sequence: [
+                    {
+                        speaker: 'Lieutenant Solis',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'The harbinger guardians are destroyed! The reality distortions are collapsing. All outpost escape pods have been recovered.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Commander T\'Vorin',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Captain, the proto-entity below is still awakening. These guardians were only the beginning. Whatever is emerging from that planet — it dwarfs anything we\'ve faced.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Then we end this here. Set course for the Crystalis flagship. We stop them before that entity fully awakens. Aurora out.',
+                        audio: null
+                    }
+                ]
+            }
         }
     },
     

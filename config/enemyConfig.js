@@ -289,5 +289,39 @@ const EnemyConfig = {
         texture: 'enemy-boss-level-3',
         hasShieldGenerators: true,
         shieldGeneratorCount: 2
+    },
+
+    // Harbinger Guardian - Level 9 mini-boss (phases in and out, reality-warping)
+    harbingerGuardian: {
+        health: 20,
+        shields: 15,
+        speed: 55,
+        fireRate: 1500,
+        bulletSpeed: 245,
+        damage: 2,
+        points: 1000,
+        movementPattern: 'horizontal',
+        spreadShot: true,
+        spreadCount: 3,
+        size: { width: 110, height: 110 },
+        texture: 'crystal-entity', // Crystal fragment of the awakening proto-entity
+        phases: true // Reality-warping: periodically phases in and out
+    },
+
+    // Harbinger's Wake Boss - Level 9 Boss (proto-entity emitting destructive pulses)
+    enemyBossLevel9: {
+        health: 450,
+        shields: 150,
+        speed: 38,
+        fireRate: 1100,
+        bulletSpeed: 245,
+        damage: 2,
+        movementPattern: 'horizontal',
+        burstCount: 5,
+        burstDelay: 140,
+        size: { width: 165, height: 165 },
+        points: 9000,
+        texture: 'enemy-boss-level-3',
+        phases: true // Also phases in and out like guardians
     }
 };

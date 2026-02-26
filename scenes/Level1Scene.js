@@ -92,7 +92,7 @@ const PLAYER_HEALTH_BAR = {
 };
 
 // Boss-type enemies that get special explosion effects
-const BOSS_TYPE_ENEMIES = ['boss', 'enemyBossLevel1', 'enemyBossLevel2', 'enemyBossLevel3', 'enemyBossLevel4', 'enemyBossLevel5', 'enemyBossLevel8', 'battleship', 'romulanWarbird'];
+const BOSS_TYPE_ENEMIES = ['boss', 'enemyBossLevel1', 'enemyBossLevel2', 'enemyBossLevel3', 'enemyBossLevel4', 'enemyBossLevel5', 'enemyBossLevel8', 'enemyBossLevel9', 'battleship', 'romulanWarbird'];
 
 // Romulan Warbird cloaking constants for Level 7
 const WARBIRD_CLOAK_FADE_DURATION = 2000; // Milliseconds for fade-in/out during cloaking
@@ -106,6 +106,12 @@ const WARBIRD_VIEWPORT_SAFE_PX = 90;     // Minimum px clearance from canvas bot
 // Shield generator orbit constants for Level 8
 const SHIELD_GENERATOR_ORBIT_RADIUS = 90; // Orbit radius around the Level 8 boss (in pixels)
 const SHIELD_GENERATOR_ORBIT_SPEED = 0.02; // Orbit angular speed in radians per frame
+
+// Level 9 enemy phasing constants (reality-warping mechanic)
+const PHASE_CYCLE_DURATION = 8000; // Full phase cycle in milliseconds
+const PHASE_OUT_DURATION = 3000;   // Duration enemies remain phased out (invincible)
+const PHASE_ALPHA = 0.25;          // Alpha value when phased (semi-transparent)
+const PHASE_TRANSITION_MS = 400;   // Duration of phase in/out fade animation
 
 // USS Sentinel constants for Level 5
 const SENTINEL_Y_FRACTION = 0.85; // Y position as fraction of screen height
@@ -1741,6 +1747,12 @@ class Level1Scene extends Phaser.Scene {
             return;
         }
         
+        // Level 9: Phased enemies — bullets pass through
+        if (enemy.isPhased) {
+            this.disableBulletPhysics(bullet);
+            return;
+        }
+        
         // Check invincibility (prevents multiple hits in rapid succession)
         if (this.time.now < (enemy.invincibleUntil || 0)) {
             return; // Still invincible, ignore damage
@@ -1818,6 +1830,12 @@ class Level1Scene extends Phaser.Scene {
         
         // Cloaked warbird: torpedoes pass right through
         if (enemy.enemyType === 'romulanWarbird' && enemy.isCloaked) {
+            return;
+        }
+        
+        // Level 9: Phased enemies — torpedoes pass through
+        if (enemy.isPhased) {
+            this.disableBulletPhysics(torpedo);
             return;
         }
         
@@ -2880,6 +2898,36 @@ class Level1Scene extends Phaser.Scene {
     }
     
     // ========================================
+    // ENEMY PHASING SYSTEM (Level 9)
+    // ========================================
+
+    updateEnemyPhasing(enemy, time) {
+        const config = EnemyConfig[enemy.enemyType];
+        if (!config || !config.phases) return;
+        
+        // Initialize phase offset once per enemy for staggered timing
+        if (enemy.phaseOffset === undefined) {
+            enemy.phaseOffset = Math.random() * PHASE_CYCLE_DURATION;
+        }
+        
+        // Determine whether enemy should currently be phased out
+        const cycleTime = (time + enemy.phaseOffset) % PHASE_CYCLE_DURATION;
+        const shouldBePhased = cycleTime > (PHASE_CYCLE_DURATION - PHASE_OUT_DURATION);
+        
+        if (shouldBePhased !== enemy.isPhased) {
+            enemy.isPhased = shouldBePhased;
+            // Animate the transition in/out
+            this.tweens.killTweensOf(enemy);
+            this.tweens.add({
+                targets: enemy,
+                alpha: shouldBePhased ? PHASE_ALPHA : 1.0,
+                duration: PHASE_TRANSITION_MS,
+                ease: 'Linear'
+            });
+        }
+    }
+
+    // ========================================
     // ROMULAN WARBIRD CLOAKING SYSTEM (Level 7)
     // ========================================
     
@@ -3312,6 +3360,7 @@ class Level1Scene extends Phaser.Scene {
     applyBeamDamage(enemy, damage) {
         if (!enemy.active) return;
         if (enemy.enemyType === 'asteroid') return;
+        if (enemy.isPhased) return; // Level 9: phased enemies cannot be damaged
         if (this.time.now < (enemy.invincibleUntil || 0)) return;
 
         // Level 8: shield generators protect boss shields - beam is deflected until generators are destroyed
@@ -3648,19 +3697,24 @@ class Level1Scene extends Phaser.Scene {
             // Update movement pattern
             this.updateEnemyMovement(enemy);
             
+            // Level 9: Update reality-warping phasing for enemies that phase
+            if (this.levelNumber === 9) {
+                this.updateEnemyPhasing(enemy, time);
+            }
+            
             // Enemy shooting - only if on screen and has weapons (scouts and asteroids don't shoot)
             // Carrier launches fighters instead of shooting
             if (enemy.enemyType === 'carrier' && enemy.fireRate && enemy.y < this.cameraHeight && enemy.hasEnteredScreen && time > enemy.lastFired + enemy.fireRate) {
                 this.launchFighters(enemy);
                 enemy.lastFired = time;
-            } else if (enemy.enemyType !== 'scout' && enemy.enemyType !== 'asteroid' && enemy.enemyType !== 'carrier' && !enemy.isCloaked && enemy.fireRate && enemy.y < this.cameraHeight && time > enemy.lastFired + enemy.fireRate) {
+            } else if (enemy.enemyType !== 'scout' && enemy.enemyType !== 'asteroid' && enemy.enemyType !== 'carrier' && !enemy.isCloaked && !enemy.isPhased && enemy.fireRate && enemy.y < this.cameraHeight && time > enemy.lastFired + enemy.fireRate) {
                 this.enemyFire(enemy);
                 enemy.lastFired = time;
             }
             
             // Target escape pods - only if on screen and has weapons
             const nearestPod = this.findNearestPod(enemy);
-            if (enemy.enemyType !== 'scout' && enemy.enemyType !== 'asteroid' && !enemy.isCloaked && enemy.fireRate && enemy.y < this.cameraHeight && nearestPod && Phaser.Math.Distance.Between(enemy.x, enemy.y, nearestPod.x, nearestPod.y) < 200) {
+            if (enemy.enemyType !== 'scout' && enemy.enemyType !== 'asteroid' && !enemy.isCloaked && !enemy.isPhased && enemy.fireRate && enemy.y < this.cameraHeight && nearestPod && Phaser.Math.Distance.Between(enemy.x, enemy.y, nearestPod.x, nearestPod.y) < 200) {
                 // Shoot at pod only if fire rate allows
                 if (time > enemy.lastFired + enemy.fireRate) {
                     const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, nearestPod.x, nearestPod.y);
