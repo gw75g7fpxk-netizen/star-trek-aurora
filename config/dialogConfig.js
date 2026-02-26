@@ -484,6 +484,76 @@ const DialogConfig = {
                     }
                 ]
             }
+        },
+
+        // Level 10: Crystalline Reckoning - Epic finale against the Crystalis flagship
+        10: {
+            intro: {
+                title: 'INCOMING TRANSMISSION',
+                sequence: [
+                    {
+                        speaker: 'Lieutenant Solis',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Captain, we\'ve found it. The Crystalis flagship is dead ahead — it\'s massive. I\'m reading shields, multiple turret emplacements, and an energy core unlike anything in our database.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Commander T\'Vorin',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'The flagship is the nexus of the entire Crystalis fleet. Destroy the entity core at its heart and the fleet loses its command signal. This ends here.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Admiral Holt',
+                        ship: 'Starbase 47',
+                        portrait: 'starfleetCommand',
+                        text: 'Aurora, Starfleet is counting on you. Destroy those turrets first to breach the shields, then target the core. The Federation stands with you.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Red alert! All hands to battle stations. We\'ve come too far to fail now. Destroy those turrets, breach the core, and end this war. For the Federation — fire at will!',
+                        audio: 'red-alert-sound'
+                    }
+                ]
+            },
+            outro: {
+                title: 'INCOMING TRANSMISSION',
+                sequence: [
+                    {
+                        speaker: 'Lieutenant Solis',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'The entity core is destroyed! The flagship is breaking apart! Enemy vessels throughout the sector are going dark — their command signal is gone!',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Commander T\'Vorin',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'Incredible. Without the flagship\'s core to coordinate them, the Crystalis fleet is scattering. The threat is over, Captain.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Admiral Holt',
+                        ship: 'Starbase 47',
+                        portrait: 'starfleetCommand',
+                        text: 'Aurora, this is Starfleet Command. You\'ve done it. The Crystalis offensive has collapsed. The Federation owes you a debt we can never repay. Outstanding work.',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'All hands — stand down from battle stations. Begin recovery operations and set course for home. Captains log: the Crystalis threat has been neutralized. Aurora out.',
+                        audio: null
+                    }
+                ]
+            }
         }
     },
     

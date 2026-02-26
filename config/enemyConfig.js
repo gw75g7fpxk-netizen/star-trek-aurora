@@ -323,5 +323,28 @@ const EnemyConfig = {
         points: 9000,
         texture: 'enemy-boss-level-3',
         phases: true // Also phases in and out like guardians
+    },
+
+    // Crystalline Reckoning Boss - Level 10 Boss (Crystalis flagship - epic finale)
+    enemyBossLevel10: {
+        health: 550,
+        shields: 250,
+        speed: 30,
+        fireRate: 900,
+        bulletSpeed: 260,
+        damage: 2,
+        movementPattern: 'horizontal',
+        burstCount: 5,
+        burstDelay: 120,
+        spreadShot: true,
+        spreadCount: 6,
+        size: { width: 180, height: 180 },
+        points: 12000,
+        texture: 'enemy-boss-level-3',
+        hasShieldGenerators: true,  // Orbiting turrets must be destroyed to expose core
+        shieldGeneratorCount: 3,    // Three turrets protecting the flagship
+        fractures: true,            // Shatters the enemy when core is exposed and health drops
+        fractureThreshold: 0.5,     // Fractures at 50% health (after turrets are destroyed)
+        fractureSpawnCount: 6       // Spawns 6 fighters when fractured
     }
 };

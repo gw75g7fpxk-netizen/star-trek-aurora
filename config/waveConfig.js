@@ -417,14 +417,51 @@ const WaveConfig = {
             type: 'enemyBossLevel9'
         }
     },
+    // Level 10: Crystalline Reckoning - Epic finale against the Crystalis flagship
     level10: {
-        wave1: { 
-            enemyCount: 5, 
-            enemyTypes: ['fighter'],
-            shipCounts: { fighter: 5 },
-            spawnRate: 2000, 
-            difficulty: 1,
-            duration: 20000
+        wave1: {
+            enemyCount: 18,
+            enemyTypes: ['fighter', 'cruiser', 'destroyer'],
+            shipCounts: { fighter: 10, cruiser: 5, destroyer: 3 },
+            spawnRate: 1600,
+            difficulty: 2.5,
+            duration: 28000
+        },
+        wave2: {
+            enemyCount: 22,
+            enemyTypes: ['fighter', 'cruiser', 'destroyer', 'battleship'],
+            shipCounts: { fighter: 8, cruiser: 6, destroyer: 5, battleship: 3 },
+            spawnRate: 1400,
+            difficulty: 3.0,
+            duration: 32000
+        },
+        wave3: {
+            enemyCount: 26,
+            enemyTypes: ['cruiser', 'destroyer', 'battleship', 'carrier'],
+            shipCounts: { cruiser: 7, destroyer: 7, battleship: 6, carrier: 6 },
+            spawnRate: 1200,
+            difficulty: 3.5,
+            duration: 36000
+        },
+        wave4: {
+            enemyCount: 30,
+            enemyTypes: ['destroyer', 'battleship', 'carrier', 'harbingerGuardian'],
+            shipCounts: { destroyer: 8, battleship: 8, carrier: 7, harbingerGuardian: 7 },
+            spawnRate: 1000,
+            difficulty: 4.0,
+            duration: 40000
+        },
+        wave5: {
+            enemyCount: 34,
+            enemyTypes: ['cruiser', 'destroyer', 'battleship', 'carrier', 'harbingerGuardian'],
+            shipCounts: { cruiser: 6, destroyer: 8, battleship: 8, carrier: 6, harbingerGuardian: 6 },
+            spawnRate: 900,
+            difficulty: 4.5,
+            duration: 44000
+        },
+        bossWave: {
+            threshold: 5, // Boss appears after wave 5
+            type: 'enemyBossLevel10'
         }
     },
     // Level 11: Secret Testing Level - One wave for each enemy type (no escape pods)
