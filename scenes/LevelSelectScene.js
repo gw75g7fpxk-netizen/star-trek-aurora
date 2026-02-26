@@ -219,123 +219,163 @@ class LevelSelectScene extends Phaser.Scene {
         const height = this.cameras.main.height
         const rightChromePad = Math.round(20 * width / 1280) + 5
 
-        let levelPositions
+        // Map area boundaries (right of info panel)
+        const mapLeft   = lcarsChromePad + Math.round(width * (isMobile ? 0.43 : 0.36))
+        const mapRight  = width - rightChromePad
+        const mapTop    = lowerBlackStart + (isMobile ? 10 : 20)
+        const mapBottom = height - (isMobile ? 10 : 20)
+        const mw = mapRight - mapLeft
+        const mh = mapBottom - mapTop
 
-        if (isMobile) {
-            // Map area: right of info panel
-            const mapLeft   = lcarsChromePad + Math.round(width * 0.43)
-            const mapRight  = width - rightChromePad
-            const mapTop    = lowerBlackStart + 10
-            const mapBottom = height - 10
-            const mw = mapRight - mapLeft
-            const mh = mapBottom - mapTop
+        // LCARS grid layout: 5 columns on desktop, 3 on mobile
+        const cols    = isMobile ? 3 : 5
+        const btnGap  = isMobile ? 5 : 7
+        const btnW    = Math.floor((mw - (cols - 1) * btnGap) / cols)
+        const rows    = Math.ceil(10 / cols)
+        // Cap button height; leave vertical room for the secret level row
+        const btnH    = Math.min(
+            Math.floor((mh - rows * btnGap) / (rows + 0.6)),
+            isMobile ? 54 : 62
+        )
 
-            levelPositions = [
-                { x: mapLeft + mw * 0.20, y: mapTop + mh * 0.04 },  // Level 1
-                { x: mapLeft + mw * 0.78, y: mapTop + mh * 0.04 },  // Level 2
-                { x: mapLeft + mw * 0.20, y: mapTop + mh * 0.18 },  // Level 3
-                { x: mapLeft + mw * 0.78, y: mapTop + mh * 0.18 },  // Level 4
-                { x: mapLeft + mw * 0.20, y: mapTop + mh * 0.32 },  // Level 5
-                { x: mapLeft + mw * 0.78, y: mapTop + mh * 0.32 },  // Level 6
-                { x: mapLeft + mw * 0.20, y: mapTop + mh * 0.46 },  // Level 7
-                { x: mapLeft + mw * 0.78, y: mapTop + mh * 0.46 },  // Level 8
-                { x: mapLeft + mw * 0.20, y: mapTop + mh * 0.60 },  // Level 9
-                { x: mapLeft + mw * 0.78, y: mapTop + mh * 0.60 },  // Level 10
-                { x: mapLeft + mw * 0.50, y: mapTop + mh * 0.76 }   // Level 11 (secret)
-            ]
-        } else {
-            // Map area: right of the info panel
-            const mapLeft   = lcarsChromePad + Math.round(width * 0.36)
-            const mapRight  = width - rightChromePad
-            const mapTop    = lowerBlackStart + 20
-            const mapBottom = height - 20
-            const mw = mapRight - mapLeft
-            const mh = mapBottom - mapTop
-
-            levelPositions = [
-                { x: mapLeft + mw * 0.10, y: mapTop + mh * 0.08 },  // Level 1
-                { x: mapLeft + mw * 0.30, y: mapTop + mh * 0.16 },  // Level 2
-                { x: mapLeft + mw * 0.52, y: mapTop + mh * 0.08 },  // Level 3
-                { x: mapLeft + mw * 0.72, y: mapTop + mh * 0.16 },  // Level 4
-                { x: mapLeft + mw * 0.88, y: mapTop + mh * 0.30 },  // Level 5
-                { x: mapLeft + mw * 0.80, y: mapTop + mh * 0.50 },  // Level 6
-                { x: mapLeft + mw * 0.60, y: mapTop + mh * 0.58 },  // Level 7
-                { x: mapLeft + mw * 0.40, y: mapTop + mh * 0.50 },  // Level 8
-                { x: mapLeft + mw * 0.24, y: mapTop + mh * 0.64 },  // Level 9
-                { x: mapLeft + mw * 0.10, y: mapTop + mh * 0.78 },  // Level 10
-                { x: mapLeft + mw * 0.50, y: mapTop + mh * 0.88 }   // Level 11 (secret)
-            ]
+        // Helper: compute bounding rect for level i
+        const getBtnRect = (i) => {
+            if (i <= 10) {
+                const col = (i - 1) % cols
+                const row = Math.floor((i - 1) / cols)
+                return {
+                    x: mapLeft + col * (btnW + btnGap),
+                    y: mapTop  + row * (btnH + btnGap),
+                    w: btnW,
+                    h: btnH
+                }
+            }
+            // Secret level 11: centred below the main grid, slightly smaller
+            const secH = Math.round(btnH * 0.80)
+            const secW = Math.min(Math.round(btnW * 1.6), Math.round(mw * 0.55))
+            return {
+                x: mapLeft + Math.round((mw - secW) / 2),
+                y: mapTop  + rows * (btnH + btnGap) + btnGap,
+                w: secW,
+                h: secH
+            }
         }
 
+        // Store rects keyed by level for the selection-cursor overlay
+        this.levelButtonRects = {}
         this.levelNodes = []
 
-        // Connecting lines between levels
-        const graphics = this.add.graphics()
-        graphics.lineStyle(2, 0x00FFFF, 0.3)
-        for (let i = 0; i < levelPositions.length - 1; i++) {
-            const s = levelPositions[i]
-            const e = levelPositions[i + 1]
-            graphics.lineBetween(s.x, s.y, e.x, e.y)
-        }
-        this.mapElements.push(graphics)
-
-        const nodeSize  = isMobile ? 15 : 20
-        const fontSize  = isMobile ? '12px' : '16px'
-        const aboveNode = isMobile ? -25 : -35
-
         for (let i = 1; i <= 11; i++) {
-            const pos         = levelPositions[i - 1]
             const isUnlocked  = ProgressConfig.isLevelUnlocked(i, this.saveData)
             const stats       = ProgressConfig.getLevelStats(i, this.saveData)
             const isCompleted = stats !== null
 
-            const nodeColor = isCompleted ? 0x00FF00 : (isUnlocked ? 0xFFFF00 : 0x666666)
-            const nodeAlpha = isUnlocked ? 1.0 : 0.5
-
-            const node = this.add.circle(pos.x, pos.y, nodeSize, nodeColor, nodeAlpha)
-            node.setStrokeStyle(isMobile ? 2 : 3, 0x00FFFF, nodeAlpha)
-            this.mapElements.push(node)
-
-            if (isUnlocked) {
-                node.setInteractive({ useHandCursor: true })
-                node.on('pointerdown', () => { this.sound.play('button-click'); this.selectLevel(i) })
-                node.on('pointerover', () => { node.setScale(1.2); node.setAlpha(1.0) })
-                node.on('pointerout',  () => { node.setScale(1.0); node.setAlpha(nodeAlpha) })
+            // Secret level 11 is hidden until unlocked
+            if (i === 11 && !isUnlocked) {
+                this.levelNodes.push({ node: null, levelNumber: i, isUnlocked: false })
+                continue
             }
 
-            // Level number label
-            const levelText = this.add.text(pos.x, pos.y, i.toString(), {
-                fontSize: fontSize,
-                color: '#000000',
-                fontFamily: lcarsFont,
-                fontStyle: 'bold'
-            }).setOrigin(0.5)
-            this.mapElements.push(levelText)
+            const rect = getBtnRect(i)
+            this.levelButtonRects[i] = rect
 
-            // Completion star
-            if (isCompleted) {
-                const star = this.add.text(pos.x, pos.y + aboveNode, '★', {
-                    fontSize: isMobile ? '16px' : '20px',
-                    color: '#FFD700'
-                }).setOrigin(0.5)
-                this.mapElements.push(star)
-            }
-
-            // Lock icon for locked levels
+            // ── LCARS colour scheme based on mission state ──
+            // Locked   : very dark navy, dim border, barely-visible text
+            // Available: dark orange fill with bright orange border, black text
+            // Completed: dark amber fill with gold border, gold text
+            let fillColor, borderColor, textColor, statusIcon, statusColor
             if (!isUnlocked) {
-                const lock = this.add.text(pos.x, pos.y + aboveNode, '🔒', {
-                    fontSize: isMobile ? '12px' : '16px'
-                }).setOrigin(0.5)
-                this.mapElements.push(lock)
+                fillColor   = 0x0D0D1A
+                borderColor = 0x222244
+                textColor   = '#222244'
+                statusIcon  = 'LOCKED'
+                statusColor = '#222244'
+            } else if (isCompleted) {
+                fillColor   = 0x553300
+                borderColor = 0xAA7700
+                textColor   = '#FFD700'
+                statusIcon  = '★'
+                statusColor = '#FFD700'
+            } else {
+                fillColor   = 0xAA4400
+                borderColor = 0xFF8800
+                textColor   = '#000000'
+                statusIcon  = '▶'
+                statusColor = '#000000'
             }
 
-            this.levelNodes.push({ node, levelNumber: i, isUnlocked })
+            // Button background graphic (redrawn on hover)
+            const bg = this.add.graphics()
+            const redrawBg = (dimmed) => {
+                bg.clear()
+                bg.fillStyle(fillColor, dimmed ? 0.55 : 0.90)
+                bg.fillRoundedRect(rect.x, rect.y, rect.w, rect.h, 4)
+                bg.lineStyle(1, borderColor, dimmed ? 0.40 : 0.85)
+                bg.strokeRoundedRect(rect.x, rect.y, rect.w, rect.h, 4)
+            }
+            redrawBg(false)
+            this.mapElements.push(bg)
+
+            // Level number
+            const numSize = isMobile ? '16px' : '20px'
+            const numText = this.add.text(
+                rect.x + rect.w / 2,
+                rect.y + Math.round(rect.h * 0.34),
+                String(i), {
+                    fontSize: numSize,
+                    color: textColor,
+                    fontFamily: lcarsFont,
+                    fontStyle: 'bold'
+                }).setOrigin(0.5)
+            this.mapElements.push(numText)
+
+            // Status icon / label
+            const iconSize = isMobile ? '11px' : '13px'
+            const iconEl = this.add.text(
+                rect.x + rect.w / 2,
+                rect.y + Math.round(rect.h * 0.72),
+                statusIcon, {
+                    fontSize: iconSize,
+                    color: statusColor,
+                    fontFamily: lcarsFont,
+                    fontStyle: 'bold'
+                }).setOrigin(0.5)
+            this.mapElements.push(iconEl)
+
+            // Interactive zone for unlocked levels only
+            if (isUnlocked) {
+                const zone = this.add.zone(
+                    rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w, rect.h
+                ).setInteractive({ useHandCursor: true })
+                zone.on('pointerdown', () => { this.sound.play('button-click'); this.selectLevel(i) })
+                zone.on('pointerover', () => redrawBg(true))
+                zone.on('pointerout',  () => redrawBg(false))
+                this.levelNodes.push({ node: zone, levelNumber: i, isUnlocked: true })
+            } else {
+                this.levelNodes.push({ node: null, levelNumber: i, isUnlocked: false })
+            }
         }
+
+        // Selection cursor drawn on top of all buttons
+        this.selectionCursor = this.add.graphics()
+        this.mapElements.push(this.selectionCursor)
+        this.updateSelectionCursor()
+    }
+
+    // Redraws the cyan LCARS selection border around the currently selected level
+    updateSelectionCursor() {
+        if (!this.selectionCursor) return
+        this.selectionCursor.clear()
+        const rect = this.levelButtonRects && this.levelButtonRects[this.selectedLevel]
+        if (!rect) return
+        this.selectionCursor.lineStyle(2, 0x00FFFF, 1.0)
+        this.selectionCursor.strokeRoundedRect(rect.x - 1, rect.y - 1, rect.w + 2, rect.h + 2, 5)
     }
 
     selectLevel(levelNumber) {
         this.selectedLevel = levelNumber
         this.updateInfoPanel()
+        this.updateSelectionCursor()
         console.log(`Selected level ${levelNumber}`)
     }
 
@@ -455,7 +495,7 @@ class LevelSelectScene extends Phaser.Scene {
         this.backBtn.disableInteractive()
         this.missionSubtitle.disableInteractive()
         if (this.launchBtn) this.launchBtn.zone.disableInteractive()
-        this.levelNodes.forEach(({ node }) => node.disableInteractive())
+        this.levelNodes.forEach(({ node }) => { if (node) node.disableInteractive() })
 
         const groups  = this.buildFadeGroups()
         const GAP_MS  = 100
