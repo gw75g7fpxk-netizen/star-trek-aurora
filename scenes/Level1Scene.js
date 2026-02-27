@@ -106,11 +106,8 @@ const WARBIRD_VIEWPORT_SAFE_PX = 90;     // Minimum px clearance from canvas bot
 const SENTINEL_RESCUE_ENTRY_DURATION = 1500; // ms for rescue Sentinel to slide into view from off-screen
 const SENTINEL_RESCUE_TORPEDO_COUNT = 6;     // Number of torpedoes in the rescue volley
 const SENTINEL_RESCUE_DESTROY_DELAY = 800;   // ms after beam fires before warbird is destroyed
-const SENTINEL_RESCUE_RETREAT_DELAY = 1500;  // ms after warbird destruction before Sentinel retreats
-const SENTINEL_RESCUE_EXIT_DURATION = 2000;  // ms for rescue Sentinel to exit off-screen
 const SENTINEL_RESCUE_SPAWN_Y = -150;        // Off-screen Y spawn position for the rescue Sentinel
 const SENTINEL_RESCUE_ENTRY_Y = 120;         // On-screen Y position the rescue Sentinel slides into
-const SENTINEL_RESCUE_EXIT_Y = -200;         // Off-screen Y position the rescue Sentinel retreats to
 const SENTINEL_RESCUE_X_FRACTION = 0.75;     // Horizontal position as fraction of screen width
 const SENTINEL_RESCUE_X_MARGIN = 60;         // Minimum px from screen right edge for rescue Sentinel
 const SENTINEL_RESCUE_TORPEDO_Y_OFFSET = 20; // Y offset below Sentinel for torpedo launch position
@@ -3226,6 +3223,7 @@ class Level1Scene extends Phaser.Scene {
         const rescueSentinelX = Math.min(this.cameraWidth * SENTINEL_RESCUE_X_FRACTION, this.cameraWidth - SENTINEL_RESCUE_X_MARGIN);
         const rescueSentinel = this.physics.add.sprite(rescueSentinelX, SENTINEL_RESCUE_SPAWN_Y, 'uss-sentinel');
         rescueSentinel.setScale(PlayerConfig.scale * SENTINEL_SCALE_MULTIPLIER);
+        rescueSentinel.setAngle(180); // Faces downward since it enters from the top of the screen
         rescueSentinel.setDepth(5);
 
         console.log('Level7: USS Sentinel rescue ship spawned off-screen — sliding into view');
@@ -3237,10 +3235,7 @@ class Level1Scene extends Phaser.Scene {
             duration: SENTINEL_RESCUE_ENTRY_DURATION,
             ease: 'Power2',
             onComplete: () => {
-                if (!warbird || !warbird.active) {
-                    this.retreatSentinelRescue(rescueSentinel);
-                    return;
-                }
+                if (!warbird || !warbird.active) return;
 
                 console.log('Level7: USS Sentinel rescue — firing all weapons at warbird');
 
@@ -3289,24 +3284,6 @@ class Level1Scene extends Phaser.Scene {
                         this.destroyEnemy(warbird);
                     }
                 });
-
-                // Retreat off-screen after the attack
-                this.time.delayedCall(SENTINEL_RESCUE_RETREAT_DELAY, () => {
-                    this.retreatSentinelRescue(rescueSentinel);
-                });
-            }
-        });
-    }
-
-    retreatSentinelRescue(rescueSentinel) {
-        if (!rescueSentinel || !rescueSentinel.active) return;
-        this.tweens.add({
-            targets: rescueSentinel,
-            y: SENTINEL_RESCUE_EXIT_Y,
-            duration: SENTINEL_RESCUE_EXIT_DURATION,
-            ease: 'Power2',
-            onComplete: () => {
-                rescueSentinel.destroy();
             }
         });
     }
