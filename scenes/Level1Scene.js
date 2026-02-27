@@ -127,6 +127,7 @@ const SENTINEL_TORPEDO_STAGGER_MS = 80; // Milliseconds between each torpedo in 
 const SENTINEL_TORPEDO_SPREAD_PX = 8; // Pixel spacing between torpedo launch positions
 const SENTINEL_BAR_WIDTH = 50; // Width of Sentinel health/shield bars in pixels
 const SENTINEL_BAR_HEIGHT = 4; // Height of Sentinel health/shield bars in pixels
+const SENTINEL_SAFE_AREA_CLEARANCE = 80; // Clearance (px) above safe area boundary when clamping Sentinel Y on mobile browser
 // System restoration wave thresholds for Level 5
 const SENTINEL_PRIMARY_WEAPONS_WAVE = 3; // Wave at which Sentinel primary weapons come online
 const SENTINEL_TORPEDOS_WAVE = 5; // Wave at which Sentinel torpedo systems come online
@@ -438,6 +439,31 @@ class Level1Scene extends Phaser.Scene {
             ? Math.max(bottomChrome, WARBIRD_VIEWPORT_SAFE_PX)
             : 0;
         return this.cameraHeight - mobileClearance - enemy.displayHeight / 2 - WARBIRD_SPAWN_BOTTOM_MARGIN;
+    }
+
+    getSentinelTargetY() {
+        // Compute the Sentinel centre Y so it stays above the iOS Safari navigation bar
+        // when the game runs in mobile browser mode (non-standalone).
+        // In standalone/desktop mode the default fraction-based position is used unchanged.
+        // In mobile browser mode we mirror getWarbirdY(): use the Visual Viewport API to
+        // measure actual bottom chrome, falling back to WARBIRD_VIEWPORT_SAFE_PX (90px)
+        // which covers the iOS Safari toolbar + home indicator on devices where
+        // visualViewport.height == cameraHeight yet the toolbar still overlays content.
+        // This keeps the Sentinel below the Aurora (which uses the larger 300px safe area
+        // offset) while still clearing the actual navigation bar.
+        const defaultY = this.cameraHeight * SENTINEL_Y_FRACTION;
+        if (this.isMobileDevice) {
+            const isStandalone = window.navigator.standalone === true ||
+                window.matchMedia('(display-mode: standalone)').matches;
+            if (!isStandalone) {
+                const bottomChrome = window.visualViewport
+                    ? Math.max(0, this.cameraHeight - window.visualViewport.height)
+                    : 0;
+                const mobileClearance = Math.max(bottomChrome, WARBIRD_VIEWPORT_SAFE_PX);
+                return Math.min(defaultY, this.cameraHeight - mobileClearance - SENTINEL_SAFE_AREA_CLEARANCE);
+            }
+        }
+        return defaultY;
     }
     
     handleResize(gameSize) {
@@ -3166,7 +3192,7 @@ class Level1Scene extends Phaser.Scene {
     
     createSentinel() {
         const sentinelX = this.cameraWidth / 2;
-        const sentinelY = this.cameraHeight * SENTINEL_Y_FRACTION;
+        const sentinelY = this.getSentinelTargetY();
         
         // Spawn Sentinel using the uss-sentinel texture (Galaxy-class)
         this.sentinel = this.physics.add.sprite(sentinelX, sentinelY, 'uss-sentinel');
@@ -3227,7 +3253,7 @@ class Level1Scene extends Phaser.Scene {
     }
     
     updateSentinelMovement() {
-        const targetY = this.cameraHeight * SENTINEL_Y_FRACTION;
+        const targetY = this.getSentinelTargetY();
 
         // Simple horizontal movement — reverse direction at screen boundaries (mirrors battleship pattern)
         if (this.sentinel.x <= SENTINEL_BOUNDARY_MARGIN && this.sentinelStats.currentVelX < 0) {
