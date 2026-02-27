@@ -152,6 +152,19 @@ const MOBILE_BROWSER_CHROME_SAFE_AREA = 300;
 // The FIRE button has radius 50px; adding 10px margin keeps the ship above the button top edge.
 const MOBILE_BOUNDS_BUFFER = 60;
 
+// Level 1 warp intro constants
+const WARP_INTRO_ZOOM = 2.5;           // Camera zoom level during warp intro
+const WARP_STAR_SCROLL_SPEED = 18;     // Stars scroll speed during warp (vs 0.5 normal)
+const WARP_NEBULA_SCROLL_SPEED = 36;   // Nebula scroll speed during warp (vs 1.5 normal)
+const WARP_EXIT_DURATION = 1500;       // Duration of warp-out star transition (ms)
+const WARP_ZOOM_OUT_DURATION = 2000;   // Duration of camera zoom-out on warp exit (ms)
+const NORMAL_STAR_SCROLL_SPEED = 0.5;  // Default star layer scroll speed (px/frame)
+const NORMAL_NEBULA_SCROLL_SPEED = 1.5; // Default nebula layer scroll speed (px/frame)
+const WARP_STAR_TRAIL_COUNT = 80;      // Number of star trails drawn in the warp overlay texture
+const WARP_STAR_TRAIL_MIN_LENGTH = 20; // Minimum length of a star trail line (pixels)
+const WARP_STAR_TRAIL_MAX_LENGTH = 50; // Maximum length of a star trail line (pixels)
+const WARP_SOUND_VOLUME = 0.8;         // Playback volume for the warp-out sound effect
+
 class Level1Scene extends Phaser.Scene {
     constructor() {
         super({ key: 'Level1Scene' });
@@ -268,6 +281,14 @@ class Level1Scene extends Phaser.Scene {
         // Level 10: Flagship shield turret tracking
         this.level10Boss = null; // Reference to the Level 10 boss with shield turrets
         
+        // Warp intro state for Level 1
+        this.warpState = null; // null = normal, 'active' = at warp, 'exiting' = warp-out animation
+        this.warpStarsLayer = null; // Overlay tileSprite showing star trails during warp
+        
+        // Background scroll speeds (modified during warp intro)
+        this.starScrollSpeed = NORMAL_STAR_SCROLL_SPEED;
+        this.nebulaScrollSpeed = NORMAL_NEBULA_SCROLL_SPEED;
+        
         // Store camera dimensions for responsive layout
         this.updateCameraDimensions();
         
@@ -362,6 +383,10 @@ class Level1Scene extends Phaser.Scene {
         
         // Check for level intro dialog
         if (DialogConfig.hasDialog(this.levelNumber, 'intro')) {
+            // Level 1: start with warp intro before showing dialog
+            if (this.levelNumber === 1) {
+                this.startWarpIntro();
+            }
             // Show intro dialog before starting waves
             this.showCommunication('intro', () => {
                 this.startNextWave();
@@ -479,6 +504,10 @@ class Level1Scene extends Phaser.Scene {
             this.nebulaLayer.setSize(this.cameraWidth, this.cameraHeight);
             this.nebulaLayer.setPosition(this.cameraWidth / 2, this.cameraHeight / 2);
         }
+        if (this.warpStarsLayer) {
+            this.warpStarsLayer.setSize(this.cameraWidth, this.cameraHeight);
+            this.warpStarsLayer.setPosition(this.cameraWidth / 2, this.cameraHeight / 2);
+        }
         
         // Update planet sprite for Level 3
         if (this.planetSprite && this.levelNumber === 3) {
@@ -595,6 +624,92 @@ class Level1Scene extends Phaser.Scene {
         }
         
         console.log('Level1Scene: Scrolling background created with parallax layers');
+    }
+
+    createWarpStarsOverlay() {
+        // Build a texture containing vertical star-trail lines to simulate warp speed
+        const g = this.make.graphics({ x: 0, y: 0, add: false });
+        g.fillStyle(0xFFFFFF, 1);
+        for (let i = 0; i < WARP_STAR_TRAIL_COUNT; i++) {
+            const x = Phaser.Math.Between(0, 1024);
+            const y = Phaser.Math.Between(0, 1024);
+            const length = Phaser.Math.Between(WARP_STAR_TRAIL_MIN_LENGTH, WARP_STAR_TRAIL_MAX_LENGTH);
+            g.fillRect(x, y, 1, length);
+        }
+        g.generateTexture('warp-stars-layer', 1024, 1024);
+        g.destroy();
+
+        this.warpStarsLayer = this.add.tileSprite(
+            this.cameraWidth / 2, this.cameraHeight / 2,
+            this.cameraWidth, this.cameraHeight,
+            'warp-stars-layer'
+        );
+        this.warpStarsLayer.setAlpha(1);
+    }
+
+    startWarpIntro() {
+        // Set warp active state and fast scroll speeds
+        this.warpState = 'active';
+        this.starScrollSpeed = WARP_STAR_SCROLL_SPEED;
+        this.nebulaScrollSpeed = WARP_NEBULA_SCROLL_SPEED;
+
+        // Zoom camera in to show the Aurora close-up
+        this.cameras.main.setZoom(WARP_INTRO_ZOOM);
+        if (this.player) {
+            this.cameras.main.centerOn(this.player.x, this.player.y);
+        }
+
+        // Create the warp star-trails overlay
+        this.createWarpStarsOverlay();
+
+        console.log('Level1Scene: Warp intro started');
+    }
+
+    exitWarp() {
+        if (this.warpState !== 'active') return;
+        this.warpState = 'exiting';
+
+        // Play warp-out sound effect
+        if (this.cache.audio.exists('warp-out-sound')) {
+            try {
+                this.sound.play('warp-out-sound', { volume: WARP_SOUND_VOLUME });
+            } catch (e) {
+                console.warn('Failed to play warp-out sound:', e);
+            }
+        }
+
+        // Fade out the warp star-trails overlay
+        if (this.warpStarsLayer) {
+            this.tweens.add({
+                targets: this.warpStarsLayer,
+                alpha: 0,
+                duration: WARP_EXIT_DURATION,
+                ease: 'Sine.easeIn',
+                onComplete: () => {
+                    if (this.warpStarsLayer) {
+                        this.warpStarsLayer.destroy();
+                        this.warpStarsLayer = null;
+                    }
+                    this.warpState = null;
+                }
+            });
+        } else {
+            this.warpState = null;
+        }
+
+        // Zoom camera back out to normal gameplay zoom
+        this.cameras.main.zoomTo(DialogConfig.camera.normalZoom, WARP_ZOOM_OUT_DURATION, 'Sine.easeOut');
+
+        // Smoothly decelerate star scroll speed back to normal
+        this.tweens.add({
+            targets: this,
+            starScrollSpeed: NORMAL_STAR_SCROLL_SPEED,
+            nebulaScrollSpeed: NORMAL_NEBULA_SCROLL_SPEED,
+            duration: WARP_EXIT_DURATION,
+            ease: 'Sine.easeOut'
+        });
+
+        console.log('Level1Scene: Warp exit initiated');
     }
 
     createPlayer() {
@@ -1273,8 +1388,12 @@ class Level1Scene extends Phaser.Scene {
         if (this.isPaused) return;
         
         // Scroll background (infinite vertical scrolling)
-        this.starsLayer.tilePositionY -= 0.5; // Slow movement
-        this.nebulaLayer.tilePositionY -= 1.5; // Faster movement for parallax
+        this.starsLayer.tilePositionY -= this.starScrollSpeed;
+        this.nebulaLayer.tilePositionY -= this.nebulaScrollSpeed;
+        // Also scroll the warp stars overlay at high speed during warp
+        if (this.warpStarsLayer) {
+            this.warpStarsLayer.tilePositionY -= this.starScrollSpeed;
+        }
         
         // Handle invulnerability visual feedback
         this.handleInvulnerabilityVisuals();
@@ -5075,6 +5194,11 @@ class Level1Scene extends Phaser.Scene {
             return;
         }
 
+        // Level 1 warp-out: trigger when advancing past the first dialog message
+        if (this.levelNumber === 1 && state.currentIndex === 1 && this.warpState === 'active') {
+            this.exitWarp();
+        }
+
         const message = state.dialogData.sequence[state.currentIndex];
 
         if (message.audio && this.cache.audio.exists(message.audio)) {
@@ -5471,6 +5595,20 @@ class Level1Scene extends Phaser.Scene {
             DialogConfig.camera.panDuration,
             'Sine.easeInOut'
         );
+
+        // Ensure camera zoom is at normal level (in case warp-out animation didn't complete)
+        if (this.cameras.main.zoom !== DialogConfig.camera.normalZoom) {
+            this.cameras.main.zoomTo(DialogConfig.camera.normalZoom, DialogConfig.camera.panDuration);
+        }
+
+        // Reset scroll speeds and clean up warp overlay if still active
+        this.starScrollSpeed = NORMAL_STAR_SCROLL_SPEED;
+        this.nebulaScrollSpeed = NORMAL_NEBULA_SCROLL_SPEED;
+        if (this.warpStarsLayer) {
+            this.warpStarsLayer.destroy();
+            this.warpStarsLayer = null;
+        }
+        this.warpState = null;
 
         // Resume game after player ship restoration
         this.time.delayedCall(DialogConfig.playerShip.scaleDuration, () => {
