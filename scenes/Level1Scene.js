@@ -442,14 +442,26 @@ class Level1Scene extends Phaser.Scene {
     }
 
     getSentinelTargetY() {
-        // Compute the Sentinel centre Y accounting for browser chrome on iOS Safari.
-        // In standalone/desktop mode this returns the default fraction-based position.
-        // In mobile browser mode (non-standalone) the safe area offset is larger, so
-        // the Sentinel is clamped above the navigation bar to stay fully visible.
-        const safeAreaOffset = this.getSafeAreaOffset();
+        // Compute the Sentinel centre Y so it stays above the iOS Safari navigation bar
+        // when the game runs in mobile browser mode (non-standalone).
+        // In standalone/desktop mode the default fraction-based position is used unchanged.
+        // In mobile browser mode we mirror getWarbirdY(): use the Visual Viewport API to
+        // measure actual bottom chrome, falling back to WARBIRD_VIEWPORT_SAFE_PX (90px)
+        // which covers the iOS Safari toolbar + home indicator on devices where
+        // visualViewport.height == cameraHeight yet the toolbar still overlays content.
+        // This keeps the Sentinel below the Aurora (which uses the larger 300px safe area
+        // offset) while still clearing the actual navigation bar.
         const defaultY = this.cameraHeight * SENTINEL_Y_FRACTION;
-        if (safeAreaOffset > this.safeAreaOffset) {
-            return Math.min(defaultY, this.cameraHeight - safeAreaOffset - SENTINEL_SAFE_AREA_CLEARANCE);
+        if (this.isMobileDevice) {
+            const isStandalone = window.navigator.standalone === true ||
+                window.matchMedia('(display-mode: standalone)').matches;
+            if (!isStandalone) {
+                const bottomChrome = window.visualViewport
+                    ? Math.max(0, this.cameraHeight - window.visualViewport.height)
+                    : 0;
+                const mobileClearance = Math.max(bottomChrome, WARBIRD_VIEWPORT_SAFE_PX);
+                return Math.min(defaultY, this.cameraHeight - mobileClearance - SENTINEL_SAFE_AREA_CLEARANCE);
+            }
         }
         return defaultY;
     }
