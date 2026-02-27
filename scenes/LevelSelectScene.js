@@ -280,28 +280,22 @@ class LevelSelectScene extends Phaser.Scene {
             this.levelButtonRects[i] = rect
 
             // ── LCARS colour scheme based on mission state ──
-            // Locked   : very dark navy, dim border, barely-visible text
-            // Available: dark orange fill with bright orange border, black text
-            // Completed: dark amber fill with gold border, gold text
-            let fillColor, borderColor, textColor, statusIcon, statusColor
+            // Locked   : very dark navy, dim border, barely-visible number
+            // Available: LCARS orange (matches primary UI buttons), black text
+            // Completed: LCARS lavender (matches upgrades button), black text
+            let fillColor, borderColor, textColor
             if (!isUnlocked) {
-                fillColor   = 0x0D0D1A
-                borderColor = 0x222244
-                textColor   = '#222244'
-                statusIcon  = 'LOCKED'
-                statusColor = '#222244'
+                fillColor   = 0x111122
+                borderColor = 0x333355
+                textColor   = '#333355'
             } else if (isCompleted) {
-                fillColor   = 0x553300
-                borderColor = 0xAA7700
-                textColor   = '#FFD700'
-                statusIcon  = '★'
-                statusColor = '#FFD700'
-            } else {
-                fillColor   = 0xAA4400
-                borderColor = 0xFF8800
+                fillColor   = 0x9999CC
+                borderColor = 0xBBBBEE
                 textColor   = '#000000'
-                statusIcon  = '▶'
-                statusColor = '#000000'
+            } else {
+                fillColor   = 0xFF9900
+                borderColor = 0xFFAA22
+                textColor   = '#000000'
             }
 
             // Button background graphic (redrawn on hover)
@@ -316,11 +310,11 @@ class LevelSelectScene extends Phaser.Scene {
             redrawBg(false)
             this.mapElements.push(bg)
 
-            // Level number
+            // Level number – centred vertically in the button
             const numSize = isMobile ? '16px' : '20px'
             const numText = this.add.text(
                 rect.x + rect.w / 2,
-                rect.y + Math.round(rect.h * 0.34),
+                rect.y + rect.h / 2,
                 String(i), {
                     fontSize: numSize,
                     color: textColor,
@@ -328,19 +322,6 @@ class LevelSelectScene extends Phaser.Scene {
                     fontStyle: 'bold'
                 }).setOrigin(0.5)
             this.mapElements.push(numText)
-
-            // Status icon / label
-            const iconSize = isMobile ? '11px' : '13px'
-            const iconEl = this.add.text(
-                rect.x + rect.w / 2,
-                rect.y + Math.round(rect.h * 0.72),
-                statusIcon, {
-                    fontSize: iconSize,
-                    color: statusColor,
-                    fontFamily: lcarsFont,
-                    fontStyle: 'bold'
-                }).setOrigin(0.5)
-            this.mapElements.push(iconEl)
 
             // Interactive zone for unlocked levels only
             if (isUnlocked) {
