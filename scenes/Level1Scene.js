@@ -101,7 +101,20 @@ const WARBIRD_CLOAK_HEALTH_FRACTION = 0.5; // Triggers at 50% of total health+sh
 const WARBIRD_INITIAL_DECLOAK_DELAY = 750; // Milliseconds after spawn before the warbird decloaks
 const WARBIRD_SPAWN_BOTTOM_MARGIN = 20;   // Pixels between bottom of warbird sprite and visible screen edge at spawn
 const WARBIRD_VIEWPORT_SAFE_PX = 90;     // Minimum px clearance from canvas bottom on mobile devices:
-                                         //   iOS Safari toolbar (~44px) + home indicator (~34px) + margin
+
+// USS Sentinel rescue constants for Level 7 (appears after final decloak at half health)
+const SENTINEL_RESCUE_ENTRY_DURATION = 1500; // ms for rescue Sentinel to slide into view from off-screen
+const SENTINEL_RESCUE_TORPEDO_COUNT = 6;     // Number of torpedoes in the rescue volley
+const SENTINEL_RESCUE_DESTROY_DELAY = 800;   // ms after beam fires before warbird is destroyed
+const SENTINEL_RESCUE_RETREAT_DELAY = 1500;  // ms after warbird destruction before Sentinel retreats
+const SENTINEL_RESCUE_EXIT_DURATION = 2000;  // ms for rescue Sentinel to exit off-screen
+const SENTINEL_RESCUE_SPAWN_Y = -150;        // Off-screen Y spawn position for the rescue Sentinel
+const SENTINEL_RESCUE_ENTRY_Y = 120;         // On-screen Y position the rescue Sentinel slides into
+const SENTINEL_RESCUE_EXIT_Y = -200;         // Off-screen Y position the rescue Sentinel retreats to
+const SENTINEL_RESCUE_X_FRACTION = 0.75;     // Horizontal position as fraction of screen width
+const SENTINEL_RESCUE_X_MARGIN = 60;         // Minimum px from screen right edge for rescue Sentinel
+const SENTINEL_RESCUE_TORPEDO_Y_OFFSET = 20; // Y offset below Sentinel for torpedo launch position
+const SENTINEL_RESCUE_BEAM_FADE_DURATION = 500; // ms for the phaser beam to fade out
 
 // Shield generator orbit constants for Level 8
 const SHIELD_GENERATOR_ORBIT_RADIUS = 90; // Orbit radius around the Level 8 boss (in pixels)
@@ -260,6 +273,7 @@ class Level1Scene extends Phaser.Scene {
         // Level 7: Romulan warbird cloaking state
         this.warbirdCloakCount = 0;        // How many times the warbird has cloaked
         this.warbirdCloakWaveActive = false; // True while a cloak-wave is in progress
+        this.sentinelRescueTriggered = false; // True after Sentinel rescue is activated
         
         // Level 8: Shield generator tracking
         this.level8Boss = null; // Reference to the Level 8 boss with shield generators
@@ -2983,9 +2997,13 @@ class Level1Scene extends Phaser.Scene {
         const warbirdConfig = EnemyConfig.romulanWarbird;
         const maxCombinedHealth = warbirdConfig.health + warbirdConfig.shields;
         const currentCombinedHealth = enemy.health + enemy.shields;
-        if (currentCombinedHealth <= maxCombinedHealth * WARBIRD_CLOAK_HEALTH_FRACTION &&
-            this.warbirdCloakCount < WARBIRD_CLOAK_MAX_COUNT) {
+        const isAtCloakThreshold = currentCombinedHealth <= maxCombinedHealth * WARBIRD_CLOAK_HEALTH_FRACTION;
+        if (isAtCloakThreshold && this.warbirdCloakCount < WARBIRD_CLOAK_MAX_COUNT) {
             this.triggerWarbirdCloaking(enemy);
+        } else if (isAtCloakThreshold &&
+            this.warbirdCloakCount >= WARBIRD_CLOAK_MAX_COUNT &&
+            !this.sentinelRescueTriggered) {
+            this.triggerSentinelRescue(enemy);
         }
     }
     
@@ -3185,7 +3203,114 @@ class Level1Scene extends Phaser.Scene {
             });
         }
     }
-    
+
+    triggerSentinelRescue(warbird) {
+        this.sentinelRescueTriggered = true;
+
+        // Make the warbird invincible so it survives until the Sentinel attack lands
+        if (warbird.body) {
+            warbird.body.checkCollision.none = true;
+        }
+
+        console.log('Level7: USS Sentinel rescue triggered — showing dialog');
+
+        this.showCommunication('sentinelRescue', () => {
+            this.executeSentinelRescueAttack(warbird);
+        });
+    }
+
+    executeSentinelRescueAttack(warbird) {
+        if (!warbird || !warbird.active) return;
+
+        // Spawn the rescue Sentinel off-screen at the top, offset to the right
+        const rescueSentinelX = Math.min(this.cameraWidth * SENTINEL_RESCUE_X_FRACTION, this.cameraWidth - SENTINEL_RESCUE_X_MARGIN);
+        const rescueSentinel = this.physics.add.sprite(rescueSentinelX, SENTINEL_RESCUE_SPAWN_Y, 'uss-sentinel');
+        rescueSentinel.setScale(PlayerConfig.scale * SENTINEL_SCALE_MULTIPLIER);
+        rescueSentinel.setDepth(5);
+
+        console.log('Level7: USS Sentinel rescue ship spawned off-screen — sliding into view');
+
+        // Slide in from the top
+        this.tweens.add({
+            targets: rescueSentinel,
+            y: SENTINEL_RESCUE_ENTRY_Y,
+            duration: SENTINEL_RESCUE_ENTRY_DURATION,
+            ease: 'Power2',
+            onComplete: () => {
+                if (!warbird || !warbird.active) {
+                    this.retreatSentinelRescue(rescueSentinel);
+                    return;
+                }
+
+                console.log('Level7: USS Sentinel rescue — firing all weapons at warbird');
+
+                // Draw the phaser beam from the rescue Sentinel to the warbird
+                const beam = this.add.graphics();
+                beam.lineStyle(SENTINEL_BEAM_WIDTH, SENTINEL_BEAM_COLOR, 1);
+                beam.lineBetween(rescueSentinel.x, rescueSentinel.y, warbird.x, warbird.y);
+                this.playSound('phaserBeam');
+
+                // Fire torpedo volley toward the warbird
+                const dx = warbird.x - rescueSentinel.x;
+                const dy = warbird.y - rescueSentinel.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const dirX = dist > 0 ? dx / dist : 0;
+                const dirY = dist > 0 ? dy / dist : 1;
+
+                for (let i = 0; i < SENTINEL_RESCUE_TORPEDO_COUNT; i++) {
+                    this.time.delayedCall(i * SENTINEL_TORPEDO_STAGGER_MS, () => {
+                        if (!rescueSentinel || !rescueSentinel.active) return;
+                        const spreadOffset = (i - Math.floor(SENTINEL_RESCUE_TORPEDO_COUNT / 2)) * SENTINEL_TORPEDO_SPREAD_PX;
+                        const torpedo = this.torpedoes.get(rescueSentinel.x + spreadOffset, rescueSentinel.y + SENTINEL_RESCUE_TORPEDO_Y_OFFSET, 'torpedo');
+                        if (!torpedo) return;
+                        this.enableBulletPhysics(torpedo);
+                        torpedo.isTorpedo = true;
+                        torpedo.damage = PlayerConfig.torpedoDamage;
+                        torpedo.body.setVelocity(dirX * PlayerConfig.bulletSpeed, dirY * PlayerConfig.bulletSpeed);
+                        this.playSound('torpedo');
+                    });
+                }
+
+                // Fade out the beam and destroy the warbird after a short delay
+                this.time.delayedCall(SENTINEL_RESCUE_DESTROY_DELAY, () => {
+                    if (beam.active) {
+                        this.tweens.add({
+                            targets: beam,
+                            alpha: 0,
+                            duration: SENTINEL_RESCUE_BEAM_FADE_DURATION,
+                            onComplete: () => { beam.destroy(); }
+                        });
+                    }
+                    if (warbird && warbird.active) {
+                        // Re-enable collision briefly so destroyEnemy works, then destroy
+                        if (warbird.body) {
+                            warbird.body.checkCollision.none = false;
+                        }
+                        this.destroyEnemy(warbird);
+                    }
+                });
+
+                // Retreat off-screen after the attack
+                this.time.delayedCall(SENTINEL_RESCUE_RETREAT_DELAY, () => {
+                    this.retreatSentinelRescue(rescueSentinel);
+                });
+            }
+        });
+    }
+
+    retreatSentinelRescue(rescueSentinel) {
+        if (!rescueSentinel || !rescueSentinel.active) return;
+        this.tweens.add({
+            targets: rescueSentinel,
+            y: SENTINEL_RESCUE_EXIT_Y,
+            duration: SENTINEL_RESCUE_EXIT_DURATION,
+            ease: 'Power2',
+            onComplete: () => {
+                rescueSentinel.destroy();
+            }
+        });
+    }
+
     // ========================================
     // USS SENTINEL SYSTEM (Level 5)
     // ========================================
