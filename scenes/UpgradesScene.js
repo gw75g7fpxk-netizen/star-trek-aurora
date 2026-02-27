@@ -14,6 +14,7 @@ class UpgradesScene extends Phaser.Scene {
         this.saveData = ProgressConfig.loadProgress()
         this.selectedCategory = 'offensive'
         this.upgradeElements = []
+        this.upgradeZones = []
         this.isNavigatingBack = false
 
         // ── LCARS background – same nineslice config as MainMenuScene ──
@@ -222,6 +223,10 @@ class UpgradesScene extends Phaser.Scene {
             this.upgradeElements.forEach(el => el.destroy())
         }
         this.upgradeElements = []
+        if (this.upgradeZones) {
+            this.upgradeZones.forEach(z => z.destroy())
+        }
+        this.upgradeZones = []
     }
 
     createUpgradeList(isMobile) {
@@ -288,13 +293,17 @@ class UpgradesScene extends Phaser.Scene {
                     fontStyle: 'bold'
                 }).setOrigin(0.5)
                 if (canAfford) {
-                    btn.setInteractive({ useHandCursor: true })
-                    btn.on('pointerdown', () => {
+                    // Use a zone covering the entire upgrade card so the full bordered
+                    // area is tappable, not just the text pixels.
+                    const upgradeHitArea = this.add.zone(width / 2, y + boxH / 2, boxWidth, boxH)
+                        .setInteractive({ useHandCursor: true })
+                    upgradeHitArea.on('pointerdown', () => {
                         this.sound.play('button-click')
                         this.purchaseUpgrade(upgrade.key, cost)
                     })
-                    btn.on('pointerover', () => { btn.setStyle({ color: '#FFCC44' }); btn.setScale(1.04) })
-                    btn.on('pointerout',  () => { btn.setStyle({ color: '#FF9900' }); btn.setScale(1) })
+                    upgradeHitArea.on('pointerover', () => { btn.setStyle({ color: '#FFCC44' }); btn.setScale(1.04) })
+                    upgradeHitArea.on('pointerout',  () => { btn.setStyle({ color: '#FF9900' }); btn.setScale(1) })
+                    this.upgradeZones.push(upgradeHitArea)
                 }
                 this.upgradeElements.push(btn)
             } else {
