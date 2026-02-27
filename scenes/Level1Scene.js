@@ -11,6 +11,7 @@ const SOUND_CONFIG = {
     hit: { startFreq: 300, endFreq: 150, duration: 0.08, gain: 0.12 },
     charging: { startFreq: 200, endFreq: 600, duration: 0.5, gain: 0.08 },
     torpedo: { startFreq: 150, endFreq: 400, duration: 0.25, gain: 0.075 },
+    disruptor: { startFreq: 200, endFreq: 80, duration: 0.2, gain: 0.075 },
     'romulan-torpedo': { startFreq: 150, endFreq: 400, duration: 0.25, gain: 0.075 },
     'cloak-romulan': { startFreq: 600, endFreq: 100, duration: 1.5, gain: 0.15 },
     'decloak-romulan': { startFreq: 100, endFreq: 600, duration: 1.5, gain: 0.15 }
@@ -1113,6 +1114,36 @@ class Level1Scene extends Phaser.Scene {
                 } else {
                     // Fallback: deep rumbling torpedo sound that rises in pitch
                     oscillator.type = 'triangle';
+                    oscillator.frequency.setValueAtTime(config.startFreq, time);
+                    oscillator.frequency.exponentialRampToValueAtTime(config.endFreq, time + config.duration);
+                    gainNode.gain.setValueAtTime(config.gain, time);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, time + config.duration);
+                    oscillator.start(time);
+                    oscillator.stop(time + config.duration);
+                }
+                break;
+            case 'disruptor':
+                // Play the enemy disruptor weapon audio file
+                if (this.cache.audio.exists('disruptor-sound')) {
+                    oscillator.disconnect();
+                    gainNode.disconnect();
+                    try {
+                        this.sound.play('disruptor-sound', { volume: 0.2 });
+                    } catch (e) {
+                        // Audio file failed to play; fall through to procedural sound
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioContext.destination);
+                        oscillator.type = 'sawtooth';
+                        oscillator.frequency.setValueAtTime(config.startFreq, time);
+                        oscillator.frequency.exponentialRampToValueAtTime(config.endFreq, time + config.duration);
+                        gainNode.gain.setValueAtTime(config.gain, time);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, time + config.duration);
+                        oscillator.start(time);
+                        oscillator.stop(time + config.duration);
+                    }
+                } else {
+                    // Fallback: descending pitch disruptor sound
+                    oscillator.type = 'sawtooth';
                     oscillator.frequency.setValueAtTime(config.startFreq, time);
                     oscillator.frequency.exponentialRampToValueAtTime(config.endFreq, time + config.duration);
                     gainNode.gain.setValueAtTime(config.gain, time);
@@ -4062,6 +4093,8 @@ class Level1Scene extends Phaser.Scene {
             const burstCount = config.burstCount;
             const burstDelay = config.burstDelay || 200;
             
+            this.playSound('disruptor');
+            
             // Fire multiple bullets with delays (burst attack)
             for (let burst = 0; burst < burstCount; burst++) {
                 this.time.delayedCall(burst * burstDelay, () => {
@@ -4105,6 +4138,7 @@ class Level1Scene extends Phaser.Scene {
                     }
                 }
             }
+            this.playSound('disruptor');
             return;
         }
         
@@ -4131,6 +4165,7 @@ class Level1Scene extends Phaser.Scene {
                     bullet.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
                 }
             }
+            this.playSound('disruptor');
             return;
         }
         
@@ -4149,6 +4184,7 @@ class Level1Scene extends Phaser.Scene {
                 
                 // Fire straight down (no targeting)
                 bullet.body.setVelocity(0, config.bulletSpeed);
+                this.playSound('disruptor');
             }
             return;
         }
@@ -4172,6 +4208,8 @@ class Level1Scene extends Phaser.Scene {
             if (enemy.enemyType === 'romulanWarbird') {
                 bullet.setTintFill(0x39FF14);
                 this.playSound('romulan-torpedo');
+            } else {
+                this.playSound('disruptor');
             }
             
             // Aim at player
