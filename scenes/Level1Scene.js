@@ -160,9 +160,9 @@ const WARP_EXIT_DURATION = 1500;       // Duration of warp-out star transition (
 const WARP_ZOOM_OUT_DURATION = 2000;   // Duration of camera zoom-out on warp exit (ms)
 const NORMAL_STAR_SCROLL_SPEED = 0.5;  // Default star layer scroll speed (px/frame)
 const NORMAL_NEBULA_SCROLL_SPEED = 1.5; // Default nebula layer scroll speed (px/frame)
-const WARP_STAR_TRAIL_COUNT = 80;      // Number of star trails drawn in the warp overlay texture
-const WARP_STAR_TRAIL_MIN_LENGTH = 20; // Minimum length of a star trail line (pixels)
-const WARP_STAR_TRAIL_MAX_LENGTH = 50; // Maximum length of a star trail line (pixels)
+const WARP_STAR_TRAIL_COUNT = 250;     // Number of star trails drawn in the warp overlay texture
+const WARP_STAR_TRAIL_MIN_LENGTH = 40; // Minimum length of a star trail line (pixels)
+const WARP_STAR_TRAIL_MAX_LENGTH = 120; // Maximum length of a star trail line (pixels)
 const WARP_SOUND_VOLUME = 0.8;         // Playback volume for the warp-out sound effect
 
 class Level1Scene extends Phaser.Scene {
@@ -693,9 +693,10 @@ class Level1Scene extends Phaser.Scene {
 
         // Objects to fade from invisible → visible as the camera zooms out.
         // Health/shield bars are world-space (no scrollFactor issue) but should be hidden at warp.
+        // starsLayer (dot stars) is hidden so only streak trails are visible during warp.
         // scrollFixedHud elements are reused here to avoid duplicating the list.
         this.warpFadeInObjects = [
-            this.playerShieldBar, this.playerHealthBar,
+            this.starsLayer, this.playerShieldBar, this.playerHealthBar,
             ...scrollFixedHud
         ].filter(Boolean);
 
@@ -5275,8 +5276,8 @@ class Level1Scene extends Phaser.Scene {
             return;
         }
 
-        // Level 1 warp-out: trigger when advancing past the first dialog message
-        if (this.levelNumber === 1 && state.currentIndex === 1 && this.warpState === 'active') {
+        // Level 1 warp-out: trigger when advancing past the second dialog message
+        if (this.levelNumber === 1 && state.currentIndex === 2 && this.warpState === 'active') {
             this.exitWarp();
         }
 
