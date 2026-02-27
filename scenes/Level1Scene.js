@@ -127,6 +127,7 @@ const SENTINEL_TORPEDO_STAGGER_MS = 80; // Milliseconds between each torpedo in 
 const SENTINEL_TORPEDO_SPREAD_PX = 8; // Pixel spacing between torpedo launch positions
 const SENTINEL_BAR_WIDTH = 50; // Width of Sentinel health/shield bars in pixels
 const SENTINEL_BAR_HEIGHT = 4; // Height of Sentinel health/shield bars in pixels
+const SENTINEL_SAFE_AREA_CLEARANCE = 80; // Clearance (px) above safe area boundary when clamping Sentinel Y on mobile browser
 // System restoration wave thresholds for Level 5
 const SENTINEL_PRIMARY_WEAPONS_WAVE = 3; // Wave at which Sentinel primary weapons come online
 const SENTINEL_TORPEDOS_WAVE = 5; // Wave at which Sentinel torpedo systems come online
@@ -438,6 +439,19 @@ class Level1Scene extends Phaser.Scene {
             ? Math.max(bottomChrome, WARBIRD_VIEWPORT_SAFE_PX)
             : 0;
         return this.cameraHeight - mobileClearance - enemy.displayHeight / 2 - WARBIRD_SPAWN_BOTTOM_MARGIN;
+    }
+
+    getSentinelTargetY() {
+        // Compute the Sentinel centre Y accounting for browser chrome on iOS Safari.
+        // In standalone/desktop mode this returns the default fraction-based position.
+        // In mobile browser mode (non-standalone) the safe area offset is larger, so
+        // the Sentinel is clamped above the navigation bar to stay fully visible.
+        const safeAreaOffset = this.getSafeAreaOffset();
+        const defaultY = this.cameraHeight * SENTINEL_Y_FRACTION;
+        if (safeAreaOffset > this.safeAreaOffset) {
+            return Math.min(defaultY, this.cameraHeight - safeAreaOffset - SENTINEL_SAFE_AREA_CLEARANCE);
+        }
+        return defaultY;
     }
     
     handleResize(gameSize) {
@@ -3166,7 +3180,7 @@ class Level1Scene extends Phaser.Scene {
     
     createSentinel() {
         const sentinelX = this.cameraWidth / 2;
-        const sentinelY = this.cameraHeight * SENTINEL_Y_FRACTION;
+        const sentinelY = this.getSentinelTargetY();
         
         // Spawn Sentinel using the uss-sentinel texture (Galaxy-class)
         this.sentinel = this.physics.add.sprite(sentinelX, sentinelY, 'uss-sentinel');
@@ -3227,7 +3241,7 @@ class Level1Scene extends Phaser.Scene {
     }
     
     updateSentinelMovement() {
-        const targetY = this.cameraHeight * SENTINEL_Y_FRACTION;
+        const targetY = this.getSentinelTargetY();
 
         // Simple horizontal movement — reverse direction at screen boundaries (mirrors battleship pattern)
         if (this.sentinel.x <= SENTINEL_BOUNDARY_MARGIN && this.sentinelStats.currentVelX < 0) {
