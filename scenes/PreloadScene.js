@@ -197,6 +197,9 @@ class PreloadScene extends Phaser.Scene {
         // Load red alert sound effect for dialog
         this.load.audio('red-alert-sound', 'assets/audio/tng_red_alert2.mp3');
         
+        // Load warp-out sound for level 1 intro sequence
+        this.load.audio('warp-out-sound', 'assets/audio/tng_warp_out4.mp3');
+        
         // Load LCARS button click sound
         this.load.audio('button-click', 'assets/audio/keyok3.mp3');
         

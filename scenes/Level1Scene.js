@@ -152,6 +152,19 @@ const MOBILE_BROWSER_CHROME_SAFE_AREA = 300;
 // The FIRE button has radius 50px; adding 10px margin keeps the ship above the button top edge.
 const MOBILE_BOUNDS_BUFFER = 60;
 
+// Level 1 warp intro constants
+const WARP_INTRO_ZOOM = 3.5;           // Camera zoom level during warp intro
+const WARP_STAR_SCROLL_SPEED = 18;     // Stars scroll speed during warp (vs 0.5 normal)
+const WARP_NEBULA_SCROLL_SPEED = 36;   // Nebula scroll speed during warp (vs 1.5 normal)
+const WARP_EXIT_DURATION = 1500;       // Duration of warp-out star transition (ms)
+const WARP_ZOOM_OUT_DURATION = 2000;   // Duration of camera zoom-out on warp exit (ms)
+const NORMAL_STAR_SCROLL_SPEED = 0.5;  // Default star layer scroll speed (px/frame)
+const NORMAL_NEBULA_SCROLL_SPEED = 1.5; // Default nebula layer scroll speed (px/frame)
+const WARP_STAR_TRAIL_COUNT = 250;     // Number of star trails drawn in the warp overlay texture
+const WARP_STAR_TRAIL_MIN_LENGTH = 40; // Minimum length of a star trail line (pixels)
+const WARP_STAR_TRAIL_MAX_LENGTH = 120; // Maximum length of a star trail line (pixels)
+const WARP_SOUND_VOLUME = 0.8;         // Playback volume for the warp-out sound effect
+
 class Level1Scene extends Phaser.Scene {
     constructor() {
         super({ key: 'Level1Scene' });
@@ -268,6 +281,18 @@ class Level1Scene extends Phaser.Scene {
         // Level 10: Flagship shield turret tracking
         this.level10Boss = null; // Reference to the Level 10 boss with shield turrets
         
+        // Warp intro state for Level 1
+        this.warpState = null; // null = normal, 'active' = at warp, 'exiting' = warp-out animation
+        this.warpStarsLayer = null; // Overlay tileSprite showing star trails during warp
+        this.uiCamera = null; // Secondary camera (zoom=1) that renders HUD during warp
+        this.warpHudObjects = null; // scrollFactor=0 objects to ignore in main camera during warp
+        this.warpFadeInObjects = null; // Objects to fade in (alpha 0→1) as warp exits
+        this._warpMainCamId = null; // Main camera ID stored for precise cameraFilter cleanup
+        
+        // Background scroll speeds (modified during warp intro)
+        this.starScrollSpeed = NORMAL_STAR_SCROLL_SPEED;
+        this.nebulaScrollSpeed = NORMAL_NEBULA_SCROLL_SPEED;
+        
         // Store camera dimensions for responsive layout
         this.updateCameraDimensions();
         
@@ -362,6 +387,10 @@ class Level1Scene extends Phaser.Scene {
         
         // Check for level intro dialog
         if (DialogConfig.hasDialog(this.levelNumber, 'intro')) {
+            // Level 1: start with warp intro before showing dialog
+            if (this.levelNumber === 1) {
+                this.startWarpIntro();
+            }
             // Show intro dialog before starting waves
             this.showCommunication('intro', () => {
                 this.startNextWave();
@@ -479,6 +508,10 @@ class Level1Scene extends Phaser.Scene {
             this.nebulaLayer.setSize(this.cameraWidth, this.cameraHeight);
             this.nebulaLayer.setPosition(this.cameraWidth / 2, this.cameraHeight / 2);
         }
+        if (this.warpStarsLayer) {
+            this.warpStarsLayer.setSize(this.cameraWidth, this.cameraHeight);
+            this.warpStarsLayer.setPosition(this.cameraWidth / 2, this.cameraHeight / 2);
+        }
         
         // Update planet sprite for Level 3
         if (this.planetSprite && this.levelNumber === 3) {
@@ -595,6 +628,170 @@ class Level1Scene extends Phaser.Scene {
         }
         
         console.log('Level1Scene: Scrolling background created with parallax layers');
+    }
+
+    createWarpStarsOverlay() {
+        // Build a texture containing vertical star-trail lines to simulate warp speed
+        const g = this.make.graphics({ x: 0, y: 0, add: false });
+        g.fillStyle(0xFFFFFF, 1);
+        for (let i = 0; i < WARP_STAR_TRAIL_COUNT; i++) {
+            const x = Phaser.Math.Between(0, 1024);
+            const y = Phaser.Math.Between(0, 1024);
+            const length = Phaser.Math.Between(WARP_STAR_TRAIL_MIN_LENGTH, WARP_STAR_TRAIL_MAX_LENGTH);
+            g.fillRect(x, y, 1, length);
+        }
+        g.generateTexture('warp-stars-layer', 1024, 1024);
+        g.destroy();
+
+        this.warpStarsLayer = this.add.tileSprite(
+            this.cameraWidth / 2, this.cameraHeight / 2,
+            this.cameraWidth, this.cameraHeight,
+            'warp-stars-layer'
+        );
+        this.warpStarsLayer.setAlpha(1);
+    }
+
+    startWarpIntro() {
+        // Set warp active state and fast scroll speeds
+        this.warpState = 'active';
+        this.starScrollSpeed = WARP_STAR_SCROLL_SPEED;
+        this.nebulaScrollSpeed = WARP_NEBULA_SCROLL_SPEED;
+
+        // Create the warp star-trails overlay first (needed before uiCamera ignore list)
+        this.createWarpStarsOverlay();
+
+        // Create a secondary UI camera that stays at zoom=1 throughout.
+        // This ensures dialog/HUD elements rendered by the uiCamera always appear at
+        // their intended screen position and size, unaffected by the main camera zoom.
+        this.uiCamera = this.cameras.add(0, 0, this.cameraWidth, this.cameraHeight).setName('ui');
+
+        // Tell the uiCamera to ignore world objects — they are handled by the main camera.
+        this.uiCamera.ignore([
+            this.starsLayer, this.nebulaLayer, this.warpStarsLayer,
+            this.player, this.playerShieldBar, this.playerHealthBar
+        ].filter(Boolean));
+
+        // All scrollFactor=0 HUD elements must be ignored by the main camera while it is
+        // zoomed, so the uiCamera renders them correctly at zoom=1 instead.
+        // Store the main camera id for precise bit-clearing during cleanup.
+        this._warpMainCamId = this.cameras.main.id;
+        const scrollFixedHud = [
+            this.scoreText, this.waveText, this.multiplierText, this.podsText, this.highScoreText,
+            this.pauseButton, this.pauseButtonBg,
+            this.joystickBase, this.joystickStick,
+            this.fireButton, this.fireIcon,
+            this.torpedoButton, this.torpedoButtonRing, this.torpedoIcon
+        ].filter(Boolean);
+
+        // cameraFilter is a bitmask initialized to 0 by Phaser for every game object.
+        // Setting a camera's bit makes that camera skip rendering the object.
+        scrollFixedHud.forEach(obj => { obj.cameraFilter |= this._warpMainCamId; });
+
+        // warpHudObjects tracks every scrollFactor=0 element whose cameraFilter was set.
+        // Dialog elements will be appended here when each message is displayed.
+        this.warpHudObjects = [...scrollFixedHud];
+
+        // Objects to fade from invisible → visible as the camera zooms out.
+        // Health/shield bars are world-space (no scrollFactor issue) but should be hidden at warp.
+        // starsLayer (dot stars) is hidden so only streak trails are visible during warp.
+        // scrollFixedHud elements are reused here to avoid duplicating the list.
+        this.warpFadeInObjects = [
+            this.starsLayer, this.playerShieldBar, this.playerHealthBar,
+            ...scrollFixedHud
+        ].filter(Boolean);
+
+        // Hide all of these immediately
+        this.warpFadeInObjects.forEach(obj => obj.setAlpha(0));
+
+        // Zoom main camera in to show the Aurora close-up
+        this.cameras.main.setZoom(WARP_INTRO_ZOOM);
+        if (this.player) {
+            this.cameras.main.centerOn(this.player.x, this.player.y);
+        }
+
+        console.log('Level1Scene: Warp intro started');
+    }
+
+    exitWarp() {
+        if (this.warpState !== 'active') return;
+        this.warpState = 'exiting';
+
+        // Play warp-out sound effect
+        if (this.cache.audio.exists('warp-out-sound')) {
+            try {
+                this.sound.play('warp-out-sound', { volume: WARP_SOUND_VOLUME });
+            } catch (e) {
+                console.warn('Failed to play warp-out sound:', e);
+            }
+        }
+
+        // Fade out the warp star-trails overlay
+        if (this.warpStarsLayer) {
+            this.tweens.add({
+                targets: this.warpStarsLayer,
+                alpha: 0,
+                duration: WARP_EXIT_DURATION,
+                ease: 'Sine.easeIn',
+                onComplete: () => {
+                    if (this.warpStarsLayer) {
+                        this.warpStarsLayer.destroy();
+                        this.warpStarsLayer = null;
+                    }
+                    this.warpState = null;
+                }
+            });
+        } else {
+            this.warpState = null;
+        }
+
+        // Zoom camera back out to normal gameplay zoom
+        this.cameras.main.zoomTo(DialogConfig.camera.normalZoom, WARP_ZOOM_OUT_DURATION, 'Sine.easeOut');
+
+        // Smoothly decelerate star scroll speed back to normal
+        this.tweens.add({
+            targets: this,
+            starScrollSpeed: NORMAL_STAR_SCROLL_SPEED,
+            nebulaScrollSpeed: NORMAL_NEBULA_SCROLL_SPEED,
+            duration: WARP_EXIT_DURATION,
+            ease: 'Sine.easeOut'
+        });
+
+        // Fade in health/shield bars, HUD texts, and mobile controls as camera zooms out.
+        // These are rendered by the uiCamera (zoom=1) while fading in, then the uiCamera
+        // is removed after the zoom completes — both cameras are at zoom=1 by then.
+        if (this.warpFadeInObjects && this.warpFadeInObjects.length > 0) {
+            this.tweens.add({
+                targets: this.warpFadeInObjects.filter(o => o && o.active),
+                alpha: 1,
+                duration: WARP_ZOOM_OUT_DURATION,
+                ease: 'Sine.easeIn'
+            });
+        }
+
+        // After zoom-out completes, restore main camera rendering of all HUD elements
+        // and remove the secondary uiCamera
+        this.time.delayedCall(WARP_ZOOM_OUT_DURATION, () => {
+            this._cleanupWarpCamera();
+        });
+
+        console.log('Level1Scene: Warp exit initiated');
+    }
+
+    _cleanupWarpCamera() {
+        // Restore only the main camera's bit in each object's cameraFilter, preserving any
+        // other camera filters that may be in use.
+        if (this.warpHudObjects) {
+            const bit = this._warpMainCamId || 0;
+            this.warpHudObjects.forEach(obj => { if (obj) obj.cameraFilter &= ~bit; });
+            this.warpHudObjects = null;
+        }
+        this._warpMainCamId = null;
+        this.warpFadeInObjects = null;
+        // Remove the secondary UI camera now that the main camera is back at zoom=1
+        if (this.uiCamera) {
+            this.cameras.remove(this.uiCamera);
+            this.uiCamera = null;
+        }
     }
 
     createPlayer() {
@@ -954,13 +1151,13 @@ class Level1Scene extends Phaser.Scene {
         });
         
         // Pause button (upper left corner)
-        const pauseButtonBg = this.add.graphics();
-        pauseButtonBg.fillStyle(0x333333, 0.8);
-        pauseButtonBg.fillRoundedRect(10, 10, 80, 30, 5);
-        pauseButtonBg.lineStyle(2, 0xFF9900, 1);
-        pauseButtonBg.strokeRoundedRect(10, 10, 80, 30, 5);
-        pauseButtonBg.setScrollFactor(0);
-        pauseButtonBg.setDepth(999);
+        this.pauseButtonBg = this.add.graphics();
+        this.pauseButtonBg.fillStyle(0x333333, 0.8);
+        this.pauseButtonBg.fillRoundedRect(10, 10, 80, 30, 5);
+        this.pauseButtonBg.lineStyle(2, 0xFF9900, 1);
+        this.pauseButtonBg.strokeRoundedRect(10, 10, 80, 30, 5);
+        this.pauseButtonBg.setScrollFactor(0);
+        this.pauseButtonBg.setDepth(999);
         
         const pauseButtonStyle = {
             fontSize: '12px',
@@ -1273,8 +1470,12 @@ class Level1Scene extends Phaser.Scene {
         if (this.isPaused) return;
         
         // Scroll background (infinite vertical scrolling)
-        this.starsLayer.tilePositionY -= 0.5; // Slow movement
-        this.nebulaLayer.tilePositionY -= 1.5; // Faster movement for parallax
+        this.starsLayer.tilePositionY -= this.starScrollSpeed;
+        this.nebulaLayer.tilePositionY -= this.nebulaScrollSpeed;
+        // Also scroll the warp stars overlay at high speed during warp
+        if (this.warpStarsLayer) {
+            this.warpStarsLayer.tilePositionY -= this.starScrollSpeed;
+        }
         
         // Handle invulnerability visual feedback
         this.handleInvulnerabilityVisuals();
@@ -5075,6 +5276,11 @@ class Level1Scene extends Phaser.Scene {
             return;
         }
 
+        // Level 1 warp-out: trigger when advancing past the second dialog message
+        if (this.levelNumber === 1 && state.currentIndex === 2 && this.warpState === 'active') {
+            this.exitWarp();
+        }
+
         const message = state.dialogData.sequence[state.currentIndex];
 
         if (message.audio && this.cache.audio.exists(message.audio)) {
@@ -5254,6 +5460,23 @@ class Level1Scene extends Phaser.Scene {
         this.communicationState.dialogText = dialogText;
         this.communicationState.advancePrompt = advancePrompt;
         this.communicationState.fullText = message.text;
+
+        // If the warp intro uiCamera is active, dialog must be rendered by that camera
+        // (zoom=1, correct position). Tell the main camera to ignore these elements so
+        // the zoomed main camera doesn't render them at a wrong screen position.
+        if (this.uiCamera && this._warpMainCamId) {
+            const allDialogElements = [
+                ...hudElements.graphics,
+                ...hudElements.texts,
+                ...hudElements.images
+            ];
+            allDialogElements.forEach(el => {
+                el.cameraFilter |= this._warpMainCamId;
+            });
+            if (this.warpHudObjects) {
+                this.warpHudObjects.push(...allDialogElements);
+            }
+        }
 
         // Start typewriter effect
         this.startTypewriterEffect(message.text, dialogText, advancePrompt);
@@ -5471,6 +5694,31 @@ class Level1Scene extends Phaser.Scene {
             DialogConfig.camera.panDuration,
             'Sine.easeInOut'
         );
+
+        // Ensure camera zoom is at normal level (in case warp-out animation didn't complete)
+        if (this.cameras.main.zoom !== DialogConfig.camera.normalZoom) {
+            this.cameras.main.zoomTo(DialogConfig.camera.normalZoom, DialogConfig.camera.panDuration);
+        }
+
+        // Reset scroll speeds and clean up warp overlay if still active
+        this.starScrollSpeed = NORMAL_STAR_SCROLL_SPEED;
+        this.nebulaScrollSpeed = NORMAL_NEBULA_SCROLL_SPEED;
+        if (this.warpStarsLayer) {
+            this.warpStarsLayer.destroy();
+            this.warpStarsLayer = null;
+        }
+        this.warpState = null;
+
+        // Ensure warp UI camera is removed and HUD objects are fully restored.
+        // This handles the case where the user advances through all dialogs before
+        // the zoom-out animation (WARP_ZOOM_OUT_DURATION) finishes.
+        if (this.uiCamera || this.warpHudObjects) {
+            // Make sure fade-in objects are visible before we hand off to main camera
+            if (this.warpFadeInObjects) {
+                this.warpFadeInObjects.forEach(obj => { if (obj && obj.active) obj.setAlpha(1); });
+            }
+            this._cleanupWarpCamera();
+        }
 
         // Resume game after player ship restoration
         this.time.delayedCall(DialogConfig.playerShip.scaleDuration, () => {
