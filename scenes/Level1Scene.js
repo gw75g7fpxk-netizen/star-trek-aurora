@@ -3757,7 +3757,7 @@ class Level1Scene extends Phaser.Scene {
             if (enemy.enemyType === 'carrier' && enemy.fireRate && enemy.y < this.cameraHeight && enemy.hasEnteredScreen && time > enemy.lastFired + enemy.fireRate) {
                 this.launchFighters(enemy);
                 enemy.lastFired = time;
-            } else if (enemy.enemyType !== 'scout' && enemy.enemyType !== 'asteroid' && enemy.enemyType !== 'carrier' && !enemy.isCloaked && !enemy.isPhased && enemy.fireRate && enemy.y < this.cameraHeight && time > enemy.lastFired + enemy.fireRate) {
+            } else if (enemy.enemyType !== 'scout' && enemy.enemyType !== 'asteroid' && enemy.enemyType !== 'carrier' && !enemy.isCloaked && !enemy.isPhased && enemy.fireRate && enemy.y < this.cameraHeight && enemy.hasEnteredScreen && time > enemy.lastFired + enemy.fireRate) {
                 this.enemyFire(enemy);
                 enemy.lastFired = time;
             }
