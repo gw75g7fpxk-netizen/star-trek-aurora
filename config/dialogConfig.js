@@ -517,7 +517,7 @@ const DialogConfig = {
                         speaker: 'Commander T\'Vorin',
                         ship: 'USS Aurora',
                         portrait: 'playerShip',
-                        text: 'Their disruptors are charged and targeting us. Romulan fighters are launching from the warbird\'s wings. They are moving to cut off our escape vectors.',
+                        text: 'Their disruptors are charged and targeting us. They are moving to cut off our escape vectors.',
                         audio: null
                     },
                     {
