@@ -748,8 +748,11 @@ class Level1Scene extends Phaser.Scene {
             this.warpState = null;
         }
 
-        // Zoom camera back out to normal gameplay zoom
+        // Zoom camera back out to normal gameplay zoom and simultaneously pan to the
+        // gameplay-center position so world objects (e.g. the planet on Level 3) are
+        // already at their correct screen positions when the dialog closes.
         this.cameras.main.zoomTo(DialogConfig.camera.normalZoom, WARP_ZOOM_OUT_DURATION, 'Sine.easeOut');
+        this.cameras.main.pan(this.cameraWidth / 2, this.cameraHeight / 2, WARP_ZOOM_OUT_DURATION, 'Sine.easeOut');
 
         // Smoothly decelerate star scroll speed back to normal
         this.tweens.add({
