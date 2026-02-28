@@ -137,6 +137,7 @@ const SENTINEL_TORPEDOS_WAVE = 5; // Wave at which Sentinel torpedo systems come
 const SENTINEL_BEAM_FIRE_RATE = 6000;        // Milliseconds between phaser beam shots
 const SENTINEL_BEAM_ACTIVE_DURATION = 1500;  // Milliseconds the beam is fully visible before fading
 const SENTINEL_BEAM_FADE_DURATION = 500;     // Milliseconds the beam takes to fade out
+const POINT_DEFENSE_BEAM_ACTIVE_DURATION = 500; // Milliseconds point-defense beam is fully visible before fading (matches 1-second sound)
 const SENTINEL_BEAM_DAMAGE = 3;              // Damage dealt per beam hit
 const SENTINEL_BEAM_WIDTH = 4;              // Beam line width in pixels (matches bullet width)
 const SENTINEL_BEAM_COLOR = 0xFFFF00;        // Yellow, matches bullet color
@@ -1596,12 +1597,15 @@ class Level1Scene extends Phaser.Scene {
             beam.lineStyle(2, SENTINEL_BEAM_COLOR, 1)
             beam.lineBetween(this.player.x, this.player.y, closestBullet.x, closestBullet.y)
 
-            // Fade beam out like sentinel phasers
-            this.tweens.add({
-                targets: beam,
-                alpha: 0,
-                duration: SENTINEL_BEAM_FADE_DURATION,
-                onComplete: () => { beam.destroy() }
+            // Hold beam for active duration then fade out (total 1 second, matching point-defense-sound)
+            this.time.delayedCall(POINT_DEFENSE_BEAM_ACTIVE_DURATION, () => {
+                if (!beam.active) return
+                this.tweens.add({
+                    targets: beam,
+                    alpha: 0,
+                    duration: SENTINEL_BEAM_FADE_DURATION,
+                    onComplete: () => { beam.destroy() }
+                })
             })
 
             // Destroy the bullet
@@ -1611,7 +1615,16 @@ class Level1Scene extends Phaser.Scene {
             // Create small explosion at bullet location
             this.createExplosion(closestBullet.x, closestBullet.y, 0.3)
             
-            this.playSound('phaserBeam')
+            // Play point defense phaser sound
+            if (this.cache.audio.exists('point-defense-sound')) {
+                try {
+                    this.sound.play('point-defense-sound', { volume: 0.2 })
+                } catch (e) {
+                    this.playSound('phaserBeam')
+                }
+            } else {
+                this.playSound('phaserBeam')
+            }
             this.pointDefenseLastFired = time
             
             console.log('Point defense activated!')
