@@ -5722,9 +5722,17 @@ class Level1Scene extends Phaser.Scene {
         // This handles the case where the user advances through all dialogs before
         // the zoom-out animation (WARP_ZOOM_OUT_DURATION) finishes.
         if (this.uiCamera || this.warpHudObjects) {
-            // Make sure fade-in objects are visible before we hand off to main camera
+            // Make sure fade-in objects are visible before we hand off to main camera.
+            // Kill any running warp-exit tween first so it cannot overwrite the alpha=1
+            // we are about to set (this prevents the planet/HUD from fading back to an
+            // intermediate value when the user closes dialog before the 2s tween completes).
             if (this.warpFadeInObjects) {
-                this.warpFadeInObjects.forEach(obj => { if (obj && obj.active) obj.setAlpha(1); });
+                this.warpFadeInObjects.forEach(obj => {
+                    if (obj && obj.active) {
+                        this.tweens.killTweensOf(obj);
+                        obj.setAlpha(1);
+                    }
+                });
             }
             this._cleanupWarpCamera();
         }
