@@ -42,6 +42,11 @@ const CHEAT_FIRE_RATE = 100; // Milliseconds between shots
 // Escape pod spawn position (above screen top)
 const ESCAPE_POD_SPAWN_Y = -20;
 
+// Minimum Y for the joystick base so the stick can never reach the top HUD buttons.
+// Top HUD buttons (pause + skip wave) occupy roughly the top 130 px; adding the
+// joystick radius (60 px) keeps the stick entirely below that area.
+const JOYSTICK_MIN_BASE_Y = 190;
+
 // Scout formation flight pattern constants
 const SCOUT_CIRCLE_TRIGGER_FRACTION = 3; // Start circling at 1/3 of screen height
 
@@ -740,8 +745,9 @@ class Level1Scene extends Phaser.Scene {
         
         this.joystickZone.on('pointerdown', (pointer) => {
             this.joystickActive = true;
-            this.joystickBase.setPosition(pointer.x, pointer.y);
-            this.joystickStick.setPosition(pointer.x, pointer.y);
+            const baseY = Math.max(pointer.y, JOYSTICK_MIN_BASE_Y);
+            this.joystickBase.setPosition(pointer.x, baseY);
+            this.joystickStick.setPosition(pointer.x, baseY);
             // Show joystick when touched (for hybrid devices)
             if (this.isMobileDevice) {
                 this.joystickBase.setVisible(true);
