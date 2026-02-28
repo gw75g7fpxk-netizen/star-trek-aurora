@@ -281,7 +281,7 @@ class Level1Scene extends Phaser.Scene {
         // Level 10: Flagship shield turret tracking
         this.level10Boss = null; // Reference to the Level 10 boss with shield turrets
         
-        // Warp intro state for Level 1
+        // Warp intro state for Level 1 and Level 3
         this.warpState = null; // null = normal, 'active' = at warp, 'exiting' = warp-out animation
         this.warpStarsLayer = null; // Overlay tileSprite showing star trails during warp
         this.uiCamera = null; // Secondary camera (zoom=1) that renders HUD during warp
@@ -387,8 +387,8 @@ class Level1Scene extends Phaser.Scene {
         
         // Check for level intro dialog
         if (DialogConfig.hasDialog(this.levelNumber, 'intro')) {
-            // Level 1: start with warp intro before showing dialog
-            if (this.levelNumber === 1) {
+            // Level 1 & 3: start with warp intro before showing dialog
+            if (this.levelNumber === 1 || this.levelNumber === 3) {
                 this.startWarpIntro();
             }
             // Show intro dialog before starting waves
@@ -697,6 +697,7 @@ class Level1Scene extends Phaser.Scene {
         // scrollFixedHud elements are reused here to avoid duplicating the list.
         this.warpFadeInObjects = [
             this.starsLayer, this.playerShieldBar, this.playerHealthBar,
+            this.planetSprite,
             ...scrollFixedHud
         ].filter(Boolean);
 
@@ -5278,6 +5279,11 @@ class Level1Scene extends Phaser.Scene {
 
         // Level 1 warp-out: trigger when advancing past the second dialog message
         if (this.levelNumber === 1 && state.currentIndex === 2 && this.warpState === 'active') {
+            this.exitWarp();
+        }
+
+        // Level 3 warp-out: trigger after Captain Thorne says "set course for New Horizon" (index 2)
+        if (this.levelNumber === 3 && state.currentIndex === 3 && this.warpState === 'active') {
             this.exitWarp();
         }
 
