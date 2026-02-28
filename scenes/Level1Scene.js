@@ -1631,6 +1631,9 @@ class Level1Scene extends Phaser.Scene {
     }
 
     handleShooting(time) {
+        // Don't fire weapons while dialog is active
+        if (this.communicationState) return;
+
         const canFire = time > this.lastFired + this.playerStats.fireRate;
         
         if ((this.spaceKey.isDown || this.isFiring || this.autoFire) && canFire) {
