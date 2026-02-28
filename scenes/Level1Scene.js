@@ -666,9 +666,12 @@ class Level1Scene extends Phaser.Scene {
         this.uiCamera = this.cameras.add(0, 0, this.cameraWidth, this.cameraHeight).setName('ui');
 
         // Tell the uiCamera to ignore world objects — they are handled by the main camera.
+        // planetSprite (Level 3) is a world-space object and must also be excluded from
+        // the uiCamera so it is never double-rendered at conflicting screen positions.
         this.uiCamera.ignore([
             this.starsLayer, this.nebulaLayer, this.warpStarsLayer,
-            this.player, this.playerShieldBar, this.playerHealthBar
+            this.player, this.playerShieldBar, this.playerHealthBar,
+            this.planetSprite
         ].filter(Boolean));
 
         // All scrollFactor=0 HUD elements must be ignored by the main camera while it is
