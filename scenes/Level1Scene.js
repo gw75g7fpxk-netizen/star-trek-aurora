@@ -1591,20 +1591,19 @@ class Level1Scene extends Phaser.Scene {
         
         // Destroy closest bullet if found
         if (closestBullet) {
-            // Create visual effect (beam from player to bullet)
-            const beam = this.add.line(
-                0, 0,
-                this.player.x, this.player.y,
-                closestBullet.x, closestBullet.y,
-                0x00FFFF, 0.8
-            )
-            beam.setLineWidth(2)
-            
-            // Remove beam after short delay
-            this.time.delayedCall(100, () => {
-                beam.destroy()
+            // Create visual effect (beam from player to bullet) — matches sentinel phaser style at half thickness
+            const beam = this.add.graphics()
+            beam.lineStyle(2, SENTINEL_BEAM_COLOR, 1)
+            beam.lineBetween(this.player.x, this.player.y, closestBullet.x, closestBullet.y)
+
+            // Fade beam out like sentinel phasers
+            this.tweens.add({
+                targets: beam,
+                alpha: 0,
+                duration: SENTINEL_BEAM_FADE_DURATION,
+                onComplete: () => { beam.destroy() }
             })
-            
+
             // Destroy the bullet
             closestBullet.setActive(false)
             closestBullet.setVisible(false)
@@ -1612,7 +1611,7 @@ class Level1Scene extends Phaser.Scene {
             // Create small explosion at bullet location
             this.createExplosion(closestBullet.x, closestBullet.y, 0.3)
             
-            this.playSound('hit')
+            this.playSound('phaserBeam')
             this.pointDefenseLastFired = time
             
             console.log('Point defense activated!')
