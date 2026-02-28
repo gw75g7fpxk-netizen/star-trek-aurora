@@ -2525,6 +2525,48 @@ class Level1Scene extends Phaser.Scene {
     skipToNextWave() {
         console.log('Level1Scene: Skipping to next wave (testing feature)');
         
+        // Special handling for Level 7 Romulan warbird fight — isFinalWave is always true once
+        // the warbird spawns, so the generic branch below would skip straight to the outro.
+        // Instead, advance through the warbird's phase sequence one step at a time.
+        if (this.levelNumber === 7 && this.isFinalWave) {
+            if (this.warbirdCloakWaveActive) {
+                // Skip the current cloak wave: clear escort enemies and decloak the warbird
+                console.log('Level1Scene: Level7 - skipping cloak wave, decloaking warbird');
+                const escorts = this.enemies.getChildren().filter(e => e.active && e.enemyType !== 'romulanWarbird');
+                escorts.forEach(e => {
+                    if (e.healthBar) { e.healthBar.destroy(); e.healthBar = null; }
+                    e.destroy();
+                });
+                this.enemyBullets.clear(true, true);
+                this.warbirdCloakWaveActive = false;
+                this.warbirdCloakWaveSpawned = this.warbirdCloakWaveTotal;
+                this.enemies.children.each(enemy => {
+                    if (enemy.active && enemy.enemyType === 'romulanWarbird' && enemy.isCloaked) {
+                        this.triggerWarbirdDecloaking(enemy);
+                    }
+                });
+                return;
+            }
+
+            let warbird = null;
+            this.enemies.children.each(enemy => {
+                if (enemy.active && enemy.enemyType === 'romulanWarbird') { warbird = enemy; }
+            });
+
+            if (warbird && !this.sentinelRescueTriggered) {
+                if (this.warbirdCloakCount < WARBIRD_CLOAK_MAX_COUNT) {
+                    // Advance to the next cloak cycle
+                    console.log(`Level1Scene: Level7 - triggering warbird cloak ${this.warbirdCloakCount + 1}`);
+                    this.triggerWarbirdCloaking(warbird);
+                } else {
+                    // All cloak cycles done — trigger the Sentinel rescue
+                    console.log('Level1Scene: Level7 - triggering Sentinel rescue sequence');
+                    this.triggerSentinelRescue(warbird);
+                }
+            }
+            return;
+        }
+
         // Special handling for boss wave - destroy the boss to trigger victory
         if (this.isFinalWave) {
             console.log('Level1Scene: On boss wave - destroying all enemies to trigger victory');
