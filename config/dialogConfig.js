@@ -561,6 +561,25 @@ const DialogConfig = {
                         audio: null
                     }
                 ]
+            },
+            sentinelRescue: {
+                title: 'INCOMING TRANSMISSION',
+                sequence: [
+                    {
+                        speaker: 'Captain Thorne',
+                        ship: 'USS Aurora',
+                        portrait: 'playerShip',
+                        text: 'That warbird just keeps coming back. Sending distress call on all frequencies — we need backup now!',
+                        audio: null
+                    },
+                    {
+                        speaker: 'Captain Dray',
+                        ship: 'USS Sentinel',
+                        portrait: 'ussSentinel',
+                        text: 'Aurora, this is Sentinel — we received your distress call and are closing fast. Target locked. All weapons firing.',
+                        audio: null
+                    }
+                ]
             }
         },
 
