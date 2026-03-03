@@ -1602,15 +1602,17 @@ class Level1Scene extends Phaser.Scene {
             this.activePointDefenseBeam = { graphics: beam, targetX: closestBullet.x, targetY: closestBullet.y }
 
             // Hold beam for active duration then fade out (total 1 second, matching point-defense-sound)
+            // Tracking continues during the fade so the origin follows the player until the beam disappears
             this.time.delayedCall(POINT_DEFENSE_BEAM_ACTIVE_DURATION, () => {
                 if (!beam.active) return
-                // Stop live tracking during fade so the frozen image fades cleanly
-                this.activePointDefenseBeam = null
                 this.tweens.add({
                     targets: beam,
                     alpha: 0,
                     duration: SENTINEL_BEAM_FADE_DURATION,
-                    onComplete: () => { beam.destroy() }
+                    onComplete: () => {
+                        this.activePointDefenseBeam = null
+                        beam.destroy()
+                    }
                 })
             })
 
