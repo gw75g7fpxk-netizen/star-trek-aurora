@@ -1128,6 +1128,13 @@ class Level1Scene extends Phaser.Scene {
             this.isPicardFiring = false;
             this.picardButton.setAlpha(0.4);
         });
+        
+        // Show Picard button if the upgrade was already purchased before this scene loaded
+        if (this.picardManeuverUnlocked && this.isMobileDevice) {
+            this.picardButton.setVisible(true);
+            this.picardIcon.setVisible(true);
+            this.picardButtonRing.setVisible(true);
+        }
     }
 
     createHUD() {
@@ -5138,14 +5145,9 @@ class Level1Scene extends Phaser.Scene {
             this.pointDefenseLastFired = 0
         }
         
-        // Picard Maneuver — track unlock state and show mobile button if applicable
+        // Picard Maneuver — track unlock state (mobile button visibility set in createFireButton)
         const picardLevel = this.saveData.upgrades.picardManeuver || 0
         this.picardManeuverUnlocked = picardLevel > 0
-        if (this.picardManeuverUnlocked && this.isMobileDevice) {
-            if (this.picardButton) this.picardButton.setVisible(true)
-            if (this.picardIcon) this.picardIcon.setVisible(true)
-            if (this.picardButtonRing) this.picardButtonRing.setVisible(true)
-        }
     }
 
     // ========================================
