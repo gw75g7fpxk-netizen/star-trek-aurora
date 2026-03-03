@@ -310,6 +310,13 @@ class PreloadScene extends Phaser.Scene {
         powerUpGraphics.generateTexture('powerup-dilithium', 24, 24);
         powerUpGraphics.clear();
         
+        // Picard Maneuver (two small ship silhouettes side by side)
+        powerUpGraphics.fillStyle(0xFF8800, 1);
+        powerUpGraphics.fillTriangle(5, 0, 0, 24, 10, 24);  // Left ship
+        powerUpGraphics.fillTriangle(19, 0, 14, 24, 24, 24); // Right ship
+        powerUpGraphics.generateTexture('powerup-picard', 24, 24);
+        powerUpGraphics.clear();
+        
         // Tractor beam (blue circle)
         powerUpGraphics.fillStyle(0x0088FF, 1);
         powerUpGraphics.fillCircle(12, 12, 12);

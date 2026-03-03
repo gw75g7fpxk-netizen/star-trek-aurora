@@ -12,7 +12,7 @@ const UpgradesConfig = {
         defensive: {
             name: 'DEFENSIVE', 
             color: '#00AAFF',
-            upgrades: ['primaryShields', 'pointDefense', 'ablativeArmor']
+            upgrades: ['primaryShields', 'pointDefense', 'ablativeArmor', 'picardManeuver']
         },
         movement: {
             name: 'MOVEMENT',
@@ -118,6 +118,18 @@ const UpgradesConfig = {
                 3: { health: 6 },
                 4: { health: 7 },
                 5: { health: 8 }
+            }
+        },
+
+        picardManeuver: {
+            name: 'Picard Maneuver',
+            description: 'Emergency tactical split: appear as two ships, invincible and firing double for 5 seconds',
+            category: 'defensive',
+            maxLevel: 1,
+            costPerLevel: 25,
+            levels: {
+                0: { enabled: false },
+                1: { enabled: true }
             }
         },
 

@@ -18,6 +18,7 @@ const ProgressConfig = {
             primaryShields: 0,
             pointDefense: 0,
             ablativeArmor: 0,
+            picardManeuver: 0,
             impulseEngines: 0
         }
     },

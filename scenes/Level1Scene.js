@@ -46,6 +46,10 @@ const ESCAPE_POD_SPAWN_Y = -20;
 // Scout formation flight pattern constants
 const SCOUT_CIRCLE_TRIGGER_FRACTION = 3; // Start circling at 1/3 of screen height
 
+// Picard Maneuver constants
+const PICARD_MANEUVER_SPLIT_OFFSET = 25; // X offset for the ghost ship (pixels)
+const PICARD_MANEUVER_GHOST_ALPHA = 0.85; // Opacity of the ghost ship image
+
 // Shield impact effect constants
 const SHIELD_IMPACT = {
     radius: 40,           // Initial radius of shield bubble
@@ -271,6 +275,10 @@ class Level1Scene extends Phaser.Scene {
         this.lastShieldRecharge = 0; // Timestamp for last shield recharge
         this.shieldRechargeRate = 30000; // 30 seconds in milliseconds
         this.scoutFormationId = 0; // Counter for unique formation IDs
+        
+        // Picard Maneuver state
+        this.picardManeuverActive = false;
+        this.picardGhostShip = null;
         
         // Level 7: Romulan warbird cloaking state
         this.warbirdCloakCount = 0;        // How many times the warbird has cloaked
@@ -1658,6 +1666,14 @@ class Level1Scene extends Phaser.Scene {
             // Not invulnerable - restore full opacity
             this.player.setAlpha(1.0);
         }
+        
+        // Update ghost ship position during Picard Maneuver
+        if (this.picardManeuverActive && this.picardGhostShip) {
+            this.picardGhostShip.setPosition(
+                this.player.x + PICARD_MANEUVER_SPLIT_OFFSET,
+                this.player.y
+            );
+        }
     }
 
     handleShooting(time) {
@@ -1710,6 +1726,19 @@ class Level1Scene extends Phaser.Scene {
             
             // Haptic feedback on fire
             this.triggerHaptic('light');
+        }
+        
+        // During Picard Maneuver, ghost ship fires simultaneously
+        if (this.picardManeuverActive && this.picardGhostShip) {
+            const ghostBullet = this.bullets.get(
+                this.picardGhostShip.x,
+                this.picardGhostShip.y - 20,
+                'bullet'
+            );
+            if (ghostBullet) {
+                this.enableBulletPhysics(ghostBullet);
+                ghostBullet.body.setVelocity(0, -PlayerConfig.bulletSpeed);
+            }
         }
     }
     
@@ -2483,6 +2512,10 @@ class Level1Scene extends Phaser.Scene {
     }
     
     playerHit(player, bullet) {
+        // During Picard Maneuver, enemy targeting is confused — bullets pass right through
+        if (this.picardManeuverActive) {
+            return;
+        }
         this.disableBulletPhysics(bullet);
         
         this.takeDamage(1);
@@ -2494,6 +2527,11 @@ class Level1Scene extends Phaser.Scene {
         // are still touching, causing rapid repeated damage before the enemy is fully destroyed
         if (enemy.body) {
             enemy.body.checkCollision.none = true;
+        }
+        
+        // During Picard Maneuver, enemies cannot accurately target the ship
+        if (this.picardManeuverActive) {
+            return;
         }
         
         // Cloaked warbird: no collision damage in either direction
@@ -2624,9 +2662,45 @@ class Level1Scene extends Phaser.Scene {
                 });
                 // Tractor beam effect - attract power-ups and pods
                 break;
+            case 'picard_maneuver':
+                this.activatePicardManeuver(this.time.now + config.duration);
+                this.activePowerUps.push({
+                    type: type,
+                    effect: config.effect,
+                    endTime: this.time.now + config.duration
+                });
+                break;
         }
         
         console.log(`Power-up applied: ${config.name}`);
+    }
+    
+    activatePicardManeuver(endTime) {
+        // If already active (e.g. collected a second power-up), don't create a duplicate ghost ship
+        if (this.picardManeuverActive) {
+            return;
+        }
+        this.picardManeuverActive = true;
+        
+        // Create ghost ship image offset to the right of the player
+        this.picardGhostShip = this.add.image(
+            this.player.x + PICARD_MANEUVER_SPLIT_OFFSET,
+            this.player.y,
+            'player-ship'
+        );
+        this.picardGhostShip.setScale(PlayerConfig.scale);
+        this.picardGhostShip.setAlpha(PICARD_MANEUVER_GHOST_ALPHA);
+        
+        console.log('Picard Maneuver activated!');
+    }
+    
+    deactivatePicardManeuver() {
+        this.picardManeuverActive = false;
+        if (this.picardGhostShip) {
+            this.picardGhostShip.destroy();
+            this.picardGhostShip = null;
+        }
+        console.log('Picard Maneuver deactivated!');
     }
     
     
@@ -3936,7 +4010,13 @@ class Level1Scene extends Phaser.Scene {
     }
     
     spawnPowerUp(x, y) {
-        const types = Object.keys(PowerUpConfig.types);
+        // Filter power-up types based on what's unlocked
+        const types = Object.keys(PowerUpConfig.types).filter(type => {
+            if (type === 'picardManeuver') {
+                return (this.saveData.upgrades.picardManeuver || 0) > 0;
+            }
+            return true;
+        });
         const randomType = Phaser.Utils.Array.GetRandom(types);
         const config = PowerUpConfig.types[randomType];
         
@@ -3945,6 +4025,7 @@ class Level1Scene extends Phaser.Scene {
         if (randomType === 'speedBoost') texture = 'powerup-speed';
         if (randomType === 'dilithium') texture = 'powerup-dilithium';
         if (randomType === 'tractorBeam') texture = 'powerup-tractor';
+        if (randomType === 'picardManeuver') texture = 'powerup-picard';
         
         const powerUp = this.powerUps.get(x, y, texture);
         
@@ -4695,6 +4776,15 @@ class Level1Scene extends Phaser.Scene {
                         break;
                     case 'score_multiplier':
                         this.scoreMultiplier /= powerUp.multiplierAmount;
+                        break;
+                    case 'picard_maneuver':
+                        // Only deactivate if no other picard_maneuver power-ups are still active
+                        const otherPicardManeuvers = this.activePowerUps.filter(
+                            p => p.effect === 'picard_maneuver' && p !== powerUp
+                        );
+                        if (otherPicardManeuvers.length === 0) {
+                            this.deactivatePicardManeuver();
+                        }
                         break;
                 }
                 return false;
