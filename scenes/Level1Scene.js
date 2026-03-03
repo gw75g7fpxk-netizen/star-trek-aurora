@@ -455,6 +455,23 @@ class Level1Scene extends Phaser.Scene {
         return this.safeAreaOffset;
     }
 
+    getPlanetY() {
+        // Return the world Y at which the planet center should be placed so that
+        // exactly the top half of the planet peeks from the bottom of the VISIBLE canvas.
+        // • Desktop / standalone PWA: canvas == viewport, so planet center at cameraHeight.
+        // • Mobile Safari (browser mode): canvas extends behind browser toolbar/home bar
+        //   by getSafeAreaOffset() pixels, so we subtract that to land at the real
+        //   visible-bottom edge.
+        if (this.isMobileDevice) {
+            const isStandalone = window.navigator.standalone === true ||
+                window.matchMedia('(display-mode: standalone)').matches;
+            if (!isStandalone) {
+                return this.cameraHeight - this.getSafeAreaOffset();
+            }
+        }
+        return this.cameraHeight;
+    }
+
     getWarbirdY(enemy) {
         // Compute the warbird centre Y so that its bottom edge sits WARBIRD_SPAWN_BOTTOM_MARGIN
         // pixels above the VISIBLE bottom of the canvas.
@@ -517,8 +534,7 @@ class Level1Scene extends Phaser.Scene {
         if (this.planetSprite && this.levelNumber === 3) {
             const planetScale = this.cameraWidth / 576;
             this.planetSprite.setScale(planetScale);
-            // Keep planet center at the visible gameplay bottom (above browser chrome)
-            this.planetSprite.setPosition(this.cameraWidth / 2, this.cameraHeight - this.getSafeAreaOffset());
+            this.planetSprite.setPosition(this.cameraWidth / 2, this.getPlanetY());
         }
         
         // Update world bounds - on mobile constrain bottom to visible area above controls
@@ -614,12 +630,14 @@ class Level1Scene extends Phaser.Scene {
         
         // Level 3: Add planet under siege at bottom of screen
         if (this.levelNumber === 3) {
-            // Add planet sprite - show only top half by positioning it at the gameplay
-            // area bottom.  On mobile Safari cameraHeight includes the browser chrome, so
-            // we subtract getSafeAreaOffset() to land at the actual visible bottom edge.
-            // The planet image is 576x574, we want top half visible.
+            // Add planet sprite - show only top half by positioning its center at the
+            // bottom edge of the VISIBLE canvas.  On desktop and standalone-PWA the canvas
+            // fills the full viewport, so the planet center sits at cameraHeight.  On
+            // mobile Safari (browser mode) the canvas extends behind the toolbar/home
+            // indicator, so we subtract getSafeAreaOffset() to land at the actual visible
+            // bottom of the game area.
             const planetScale = this.cameraWidth / 576; // Scale to fit screen width
-            const planetY = this.cameraHeight - this.getSafeAreaOffset();
+            const planetY = this.getPlanetY();
             this.planetSprite = this.add.sprite(this.cameraWidth / 2, planetY, 'planet-under-siege');
             this.planetSprite.setScale(planetScale);
             this.planetSprite.setDepth(-1); // Behind game objects, same as nebula
