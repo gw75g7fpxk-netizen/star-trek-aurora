@@ -107,7 +107,11 @@ class UpgradesScene extends Phaser.Scene {
         this.upgradeListY = listStartY
         this.isMobile = isMobile
 
-        const ITEM_COUNT   = 3
+        // Use the maximum number of items in any category so the reset button
+        // is always positioned below the longest list.
+        const ITEM_COUNT = Math.max(
+            ...Object.values(UpgradesConfig.categories).map(cat => cat.upgrades.length)
+        )
         const normalSpacing = isMobile ? 70 : 56
         const normalBoxH    = isMobile ? 60 : 50
         const normalResetH  = isMobile ? 32 : 34
@@ -117,15 +121,27 @@ class UpgradesScene extends Phaser.Scene {
             + normalResetGap + normalResetH + normalFooterPad
 
         // Switch to compact mode (desktop only) when the screen is too short
-        // to fit 3 items + reset button without overlap.
+        // to fit all items + reset button without overlap.
         const compact = !isMobile && (height - listStartY) < (normalTotalNeeded - 10)
         this.compact  = compact
-        this.spacing  = compact ? 44 : normalSpacing
-        this.boxH     = compact ? 36 : normalBoxH
 
         const resetH      = compact ? 30 : normalResetH
         const resetGap    = compact ? 6  : normalResetGap
         const footerPad   = compact ? 4  : normalFooterPad
+
+        // Derive spacing/boxH so ITEM_COUNT items + reset button fit in available height.
+        // MIN_ITEM_GAP is the minimum vertical gap between item bottom and the next item top.
+        const MIN_ITEM_GAP = 3
+        const availableForContent = height - listStartY
+        const reservedForReset = resetGap + resetH + footerPad
+        const maxBoxForSpace = Math.floor(
+            (availableForContent - reservedForReset - MIN_ITEM_GAP * (ITEM_COUNT - 1)) / ITEM_COUNT
+        )
+        const fitBoxH    = Math.min(compact ? 36 : normalBoxH, Math.max(maxBoxForSpace, 20))
+        const fitSpacing = fitBoxH + MIN_ITEM_GAP
+        this.spacing = Math.min(compact ? 44 : normalSpacing, fitSpacing)
+        this.boxH    = Math.min(compact ? 36 : normalBoxH,    fitBoxH)
+
         const resetBtnW   = Math.min(Math.round(width * 0.55), 280)
 
         // Position reset button so it starts after the last item and fits on screen.

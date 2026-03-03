@@ -203,6 +203,9 @@ class PreloadScene extends Phaser.Scene {
         // Load warp-out sound for level 1 intro sequence
         this.load.audio('warp-out-sound', 'assets/audio/tng_warp_out4.mp3');
         
+        // Load Picard Maneuver activation sound
+        this.load.audio('picard-warp-sound', 'assets/audio/tng_warp3_clean.mp3');
+        
         // Load LCARS button click sound
         this.load.audio('button-click', 'assets/audio/keyok3.mp3');
         
@@ -308,6 +311,13 @@ class PreloadScene extends Phaser.Scene {
         powerUpGraphics.fillRect(8, 0, 8, 24);
         powerUpGraphics.fillRect(0, 8, 24, 8);
         powerUpGraphics.generateTexture('powerup-dilithium', 24, 24);
+        powerUpGraphics.clear();
+        
+        // Picard Maneuver (two small ship silhouettes side by side)
+        powerUpGraphics.fillStyle(0xFF8800, 1);
+        powerUpGraphics.fillTriangle(5, 0, 0, 24, 10, 24);  // Left ship
+        powerUpGraphics.fillTriangle(19, 0, 14, 24, 24, 24); // Right ship
+        powerUpGraphics.generateTexture('powerup-picard', 24, 24);
         powerUpGraphics.clear();
         
         // Tractor beam (blue circle)

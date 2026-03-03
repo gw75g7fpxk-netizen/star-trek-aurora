@@ -46,6 +46,10 @@ const ESCAPE_POD_SPAWN_Y = -20;
 // Scout formation flight pattern constants
 const SCOUT_CIRCLE_TRIGGER_FRACTION = 3; // Start circling at 1/3 of screen height
 
+// Picard Maneuver constants
+const PICARD_MANEUVER_SPLIT_OFFSET = 60; // X offset for the ghost ship (pixels)
+const PICARD_MANEUVER_GHOST_ALPHA = 0.85; // Opacity of the ghost ship image
+
 // Shield impact effect constants
 const SHIELD_IMPACT = {
     radius: 40,           // Initial radius of shield bubble
@@ -271,6 +275,12 @@ class Level1Scene extends Phaser.Scene {
         this.lastShieldRecharge = 0; // Timestamp for last shield recharge
         this.shieldRechargeRate = 30000; // 30 seconds in milliseconds
         this.scoutFormationId = 0; // Counter for unique formation IDs
+        
+        // Picard Maneuver state
+        this.picardManeuverActive = false;
+        this.picardGhostShip = null;
+        this.lastPicardManeuverFired = -PlayerConfig.picardManeuverCooldown; // Ready immediately
+        // picardManeuverUnlocked is set by initializeWeaponSystems() via applyUpgrades()
         
         // Level 7: Romulan warbird cloaking state
         this.warbirdCloakCount = 0;        // How many times the warbird has cloaked
@@ -577,6 +587,14 @@ class Level1Scene extends Phaser.Scene {
             this.torpedoIcon.x = this.cameraWidth - 80;
             this.torpedoIcon.y = this.cameraHeight - safeAreaOffset - 115;
         }
+        if (this.picardButton) {
+            this.picardButton.x = this.cameraWidth - 80;
+            this.picardButton.y = this.cameraHeight - safeAreaOffset - 230;
+        }
+        if (this.picardIcon) {
+            this.picardIcon.x = this.cameraWidth - 80;
+            this.picardIcon.y = this.cameraHeight - safeAreaOffset - 230;
+        }
         
         // Update joystick zone size
         if (this.joystickZone) {
@@ -708,7 +726,8 @@ class Level1Scene extends Phaser.Scene {
             this.pauseButton, this.pauseButtonBg,
             this.joystickBase, this.joystickStick,
             this.fireButton, this.fireIcon,
-            this.torpedoButton, this.torpedoButtonRing, this.torpedoIcon
+            this.torpedoButton, this.torpedoButtonRing, this.torpedoIcon,
+            this.picardButton, this.picardIcon, this.picardButtonRing
         ].filter(Boolean);
 
         // cameraFilter is a bitmask initialized to 0 by Phaser for every game object.
@@ -876,6 +895,9 @@ class Level1Scene extends Phaser.Scene {
         // Torpedo key (T)
         this.torpedoKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.T);
         
+        // Picard Maneuver key (P)
+        this.picardKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P);
+        
         // Pause key (ESC)
         this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
         this.escKey.on('down', () => {
@@ -901,6 +923,7 @@ class Level1Scene extends Phaser.Scene {
         this.isFiring = false;
         this.autoFire = false;
         this.isTorpedoFiring = false;
+        this.isPicardFiring = false;
         this.joystickActive = false;
         this.joystickVector = { x: 0, y: 0 };
         
@@ -1093,6 +1116,58 @@ class Level1Scene extends Phaser.Scene {
             this.isTorpedoFiring = false;
             this.torpedoButton.setAlpha(0.4);
         });
+        
+        // Picard Maneuver button (above torpedo button) — only visible when upgrade unlocked
+        const picardButtonRadius = 40;
+        const picardButtonX = buttonX;
+        const picardButtonY = torpButtonY - 115;
+        
+        this.picardButton = this.add.circle(picardButtonX, picardButtonY, picardButtonRadius, 0xFF8800, 0.4);
+        this.picardButton.setScrollFactor(0);
+        this.picardButton.setDepth(1000);
+        this.picardButton.setInteractive();
+        this.picardButton.setVisible(false); // Shown only when upgrade is unlocked
+        
+        // Picard Maneuver charge ring
+        this.picardButtonRing = this.add.graphics();
+        this.picardButtonRing.setScrollFactor(0);
+        this.picardButtonRing.setDepth(1002);
+        this.picardButtonRing.setVisible(false);
+        
+        // Picard button icon
+        this.picardIcon = this.add.text(picardButtonX, picardButtonY, 'PICARD', {
+            fontSize: '11px',
+            color: '#FFFFFF',
+            fontFamily: 'Arial',
+            fontStyle: 'bold'
+        });
+        this.picardIcon.setOrigin(0.5);
+        this.picardIcon.setScrollFactor(0);
+        this.picardIcon.setDepth(1001);
+        this.picardIcon.setVisible(false);
+        
+        this.picardButton.on('pointerdown', () => {
+            this.isPicardFiring = true;
+            this.picardButton.setAlpha(0.8);
+        });
+        
+        this.picardButton.on('pointerup', () => {
+            this.isPicardFiring = false;
+            this.picardButton.setAlpha(0.4);
+        });
+        
+        this.picardButton.on('pointerout', () => {
+            this.isPicardFiring = false;
+            this.picardButton.setAlpha(0.4);
+        });
+        
+        // Show Picard button if the upgrade was already purchased before this scene loaded
+        const picardSavedLevel = (this.saveData && this.saveData.upgrades && this.saveData.upgrades.picardManeuver) || 0
+        if (picardSavedLevel > 0 && this.isMobileDevice) {
+            this.picardButton.setVisible(true);
+            this.picardIcon.setVisible(true);
+            this.picardButtonRing.setVisible(true);
+        }
     }
 
     createHUD() {
@@ -1528,6 +1603,9 @@ class Level1Scene extends Phaser.Scene {
         // Update torpedo button charge ring
         this.updateTorpedoButton(time);
         
+        // Update Picard Maneuver button charge ring
+        this.updatePicardButton(time);
+        
         // Update USS Sentinel (Level 5 & 8)
         if ((this.levelNumber === 5 || this.levelNumber === 8) && this.sentinel && this.sentinel.active) {
             this.updateSentinel(time);
@@ -1689,6 +1767,14 @@ class Level1Scene extends Phaser.Scene {
             // Not invulnerable - restore full opacity
             this.player.setAlpha(1.0);
         }
+        
+        // Update ghost ship position during Picard Maneuver
+        if (this.picardManeuverActive && this.picardGhostShip) {
+            this.picardGhostShip.setPosition(
+                this.player.x + PICARD_MANEUVER_SPLIT_OFFSET,
+                this.player.y
+            );
+        }
     }
 
     handleShooting(time) {
@@ -1725,6 +1811,16 @@ class Level1Scene extends Phaser.Scene {
                 this.lastTorpedoFired = time;
             }
         }
+        
+        // Handle Picard Maneuver (P key or Picard button) - only if upgrade unlocked
+        if (this.picardManeuverUnlocked) {
+            if (Phaser.Input.Keyboard.JustDown(this.picardKey) || this.isPicardFiring) {
+                if (time > this.lastPicardManeuverFired + PlayerConfig.picardManeuverCooldown) {
+                    this.activatePicardManeuver();
+                    this.lastPicardManeuverFired = time;
+                }
+            }
+        }
     }
 
     fireBullet() {
@@ -1741,6 +1837,19 @@ class Level1Scene extends Phaser.Scene {
             
             // Haptic feedback on fire
             this.triggerHaptic('light');
+        }
+        
+        // During Picard Maneuver, ghost ship fires simultaneously
+        if (this.picardManeuverActive && this.picardGhostShip) {
+            const ghostBullet = this.bullets.get(
+                this.picardGhostShip.x,
+                this.picardGhostShip.y - 20,
+                'bullet'
+            );
+            if (ghostBullet) {
+                this.enableBulletPhysics(ghostBullet);
+                ghostBullet.body.setVelocity(0, -PlayerConfig.bulletSpeed);
+            }
         }
     }
     
@@ -1824,6 +1933,49 @@ class Level1Scene extends Phaser.Scene {
                 this.torpedoButtonRing.beginPath();
                 this.torpedoButtonRing.arc(x, y, ringRadius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * chargePercent, false);
                 this.torpedoButtonRing.strokePath();
+            }
+        }
+    }
+    
+    updatePicardButton(time) {
+        if (!this.picardButtonRing || !this.picardButton) return;
+        
+        this.picardButtonRing.clear();
+        
+        if (!this.picardButton.visible) return;
+        
+        const cooldown = PlayerConfig.picardManeuverCooldown;
+        const elapsed = time - this.lastPicardManeuverFired;
+        const chargePercent = Math.min(elapsed / cooldown, 1);
+        
+        const x = this.picardButton.x;
+        const y = this.picardButton.y;
+        const ringRadius = 46;
+        
+        if (this.picardManeuverActive) {
+            // Pulsing orange ring while active
+            this.picardButtonRing.lineStyle(4, 0xFF8800, 1);
+            this.picardButtonRing.beginPath();
+            this.picardButtonRing.arc(x, y, ringRadius, 0, Math.PI * 2, false);
+            this.picardButtonRing.strokePath();
+        } else if (chargePercent >= 1) {
+            // Fully charged - bright ring indicating ready to use
+            this.picardButtonRing.lineStyle(4, 0xFF8800, 1);
+            this.picardButtonRing.beginPath();
+            this.picardButtonRing.arc(x, y, ringRadius, 0, Math.PI * 2, false);
+            this.picardButtonRing.strokePath();
+        } else {
+            // Partial ring showing charge progress
+            this.picardButtonRing.lineStyle(2, 0x663300, 0.4);
+            this.picardButtonRing.beginPath();
+            this.picardButtonRing.arc(x, y, ringRadius, 0, Math.PI * 2, false);
+            this.picardButtonRing.strokePath();
+            
+            if (chargePercent > 0) {
+                this.picardButtonRing.lineStyle(4, 0xFF8800, 0.9);
+                this.picardButtonRing.beginPath();
+                this.picardButtonRing.arc(x, y, ringRadius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * chargePercent, false);
+                this.picardButtonRing.strokePath();
             }
         }
     }
@@ -2514,6 +2666,10 @@ class Level1Scene extends Phaser.Scene {
     }
     
     playerHit(player, bullet) {
+        // During Picard Maneuver, enemy targeting is confused — bullets pass right through
+        if (this.picardManeuverActive) {
+            return;
+        }
         this.disableBulletPhysics(bullet);
         
         this.takeDamage(1);
@@ -2525,6 +2681,11 @@ class Level1Scene extends Phaser.Scene {
         // are still touching, causing rapid repeated damage before the enemy is fully destroyed
         if (enemy.body) {
             enemy.body.checkCollision.none = true;
+        }
+        
+        // During Picard Maneuver, enemies cannot accurately target the ship
+        if (this.picardManeuverActive) {
+            return;
         }
         
         // Cloaked warbird: no collision damage in either direction
@@ -2658,6 +2819,50 @@ class Level1Scene extends Phaser.Scene {
         }
         
         console.log(`Power-up applied: ${config.name}`);
+    }
+    
+    activatePicardManeuver() {
+        // If already active, ignore (shouldn't be possible via cooldown, but safety guard)
+        if (this.picardManeuverActive) {
+            return;
+        }
+        this.picardManeuverActive = true;
+        
+        // Play warp sound -- ghost ship appears after 1 second (sound duration)
+        try {
+            this.sound.play('picard-warp-sound', { volume: 0.8 });
+        } catch (e) {
+            console.warn('Failed to play picard warp sound:', e);
+        }
+        
+        // Delay ghost ship creation by 1 second (sound duration)
+        this.time.delayedCall(1000, () => {
+            if (!this.picardManeuverActive || !this.player || !this.player.active) return;
+            // Create ghost ship image offset to the right of the player
+            this.picardGhostShip = this.add.image(
+                this.player.x + PICARD_MANEUVER_SPLIT_OFFSET,
+                this.player.y,
+                'player-ship'
+            );
+            this.picardGhostShip.setScale(PlayerConfig.scale);
+            this.picardGhostShip.setAlpha(PICARD_MANEUVER_GHOST_ALPHA);
+            
+            // Auto-deactivate after 5-second active duration
+            this.time.delayedCall(PlayerConfig.picardManeuverDuration, () => {
+                this.deactivatePicardManeuver();
+            });
+        });
+        
+        console.log('Picard Maneuver activated!');
+    }
+    
+    deactivatePicardManeuver() {
+        this.picardManeuverActive = false;
+        if (this.picardGhostShip) {
+            this.picardGhostShip.destroy();
+            this.picardGhostShip = null;
+        }
+        console.log('Picard Maneuver deactivated!');
     }
     
     
@@ -4983,6 +5188,10 @@ class Level1Scene extends Phaser.Scene {
         } else {
             this.pointDefenseLastFired = 0
         }
+        
+        // Picard Maneuver — track unlock state (mobile button visibility set in createFireButton)
+        const picardLevel = this.saveData.upgrades.picardManeuver || 0
+        this.picardManeuverUnlocked = picardLevel > 0
     }
 
     // ========================================
