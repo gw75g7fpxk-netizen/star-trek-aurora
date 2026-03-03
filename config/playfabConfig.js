@@ -106,6 +106,10 @@ const PlayFabManager = {
             callback(new Error('Google Sign-In is not available. Check your connection.'), null)
             return
         }
+        if (this.GOOGLE_CLIENT_ID.startsWith('YOUR_GOOGLE_CLIENT_ID')) {
+            callback(new Error('Google Sign-In is not configured. Set GOOGLE_CLIENT_ID in playfabConfig.js.'), null)
+            return
+        }
         try {
             const client = google.accounts.oauth2.initTokenClient({
                 client_id: this.GOOGLE_CLIENT_ID,
@@ -116,6 +120,10 @@ const PlayFabManager = {
                         return
                     }
                     this._playfabLoginGoogle(response.access_token, callback)
+                },
+                error_callback: (err) => {
+                    // Handles popup blocked / user closed window etc.
+                    callback(new Error(err.message || 'Google Sign-In was cancelled or blocked'), null)
                 }
             })
             client.requestAccessToken()
@@ -151,12 +159,18 @@ const PlayFabManager = {
             callback(new Error('Apple Sign-In is not available. Check your connection.'), null)
             return
         }
+        if (this.APPLE_SERVICE_ID.startsWith('YOUR_APPLE_SERVICE_ID')) {
+            callback(new Error('Apple Sign-In is not configured. Set APPLE_SERVICE_ID in playfabConfig.js.'), null)
+            return
+        }
         AppleID.auth.signIn().then((data) => {
             this._playfabLoginApple(data.authorization.id_token, callback)
         }).catch((err) => {
-            // Silently ignore user-cancelled sign-in
-            if (err && err.error !== 'popup_closed_by_user') {
-                callback(new Error(err.error || 'Apple Sign-In failed'), null)
+            if (err && err.error === 'popup_closed_by_user') {
+                // User dismissed the popup – re-enable buttons silently
+                callback(null, null)
+            } else {
+                callback(new Error((err && err.error) || 'Apple Sign-In failed'), null)
             }
         })
     },

@@ -91,6 +91,11 @@ const LoginModal = {
                 this._setMessage(error.message, '#FF6666')
                 return
             }
+            if (!data) {
+                // User cancelled the popup – clear the status message and return
+                this._setMessage('', '#AAAAEE')
+                return
+            }
             this._setMessage('Login successful! Syncing\u2026', '#00CC88')
             if (typeof ProgressConfig !== 'undefined') {
                 ProgressConfig.syncFromCloud(() => {
