@@ -2542,6 +2542,15 @@ class Level1Scene extends Phaser.Scene {
                 if (enemy.active && enemy.enemyType === 'romulanWarbird') { warbird = enemy; }
             });
 
+            // Clear all non-warbird enemies and hazards, matching the generic skip behaviour
+            this.enemies.getChildren().filter(e => e.active && e.enemyType !== 'romulanWarbird').forEach(e => {
+                if (e.healthBar) { e.healthBar.destroy(); e.healthBar = null; }
+                e.destroy();
+            });
+            this.enemyBullets.clear(true, true);
+            this.escapePods.clear(true, true);
+            this.powerUps.clear(true, true);
+
             if (!warbird) {
                 // Warbird hasn't spawned yet — clear wave1's spawn timer and spawn it immediately
                 console.log('Level1Scene: Level7 - fast-forwarding to warbird spawn');
@@ -2565,15 +2574,9 @@ class Level1Scene extends Phaser.Scene {
                 return;
             }
 
-            // A cloak wave is in progress — clear escort enemies and decloak the warbird
+            // A cloak wave is in progress — decloak the warbird (escorts already cleared above)
             if (this.warbirdCloakWaveActive) {
                 console.log('Level1Scene: Level7 - skipping cloak wave, decloaking warbird');
-                const escorts = this.enemies.getChildren().filter(e => e.active && e.enemyType !== 'romulanWarbird');
-                escorts.forEach(e => {
-                    if (e.healthBar) { e.healthBar.destroy(); e.healthBar = null; }
-                    e.destroy();
-                });
-                this.enemyBullets.clear(true, true);
                 this.warbirdCloakWaveActive = false;
                 this.warbirdCloakWaveSpawned = this.warbirdCloakWaveTotal;
                 this.enemies.children.each(enemy => {
