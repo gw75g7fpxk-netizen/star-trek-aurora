@@ -282,7 +282,7 @@ class Level1Scene extends Phaser.Scene {
         // Level 10: Flagship shield turret tracking
         this.level10Boss = null; // Reference to the Level 10 boss with shield turrets
         
-        // Warp intro state for Level 1
+        // Warp intro state for Level 1 and Level 3
         this.warpState = null; // null = normal, 'active' = at warp, 'exiting' = warp-out animation
         this.warpStarsLayer = null; // Overlay tileSprite showing star trails during warp
         this.uiCamera = null; // Secondary camera (zoom=1) that renders HUD during warp
@@ -388,8 +388,8 @@ class Level1Scene extends Phaser.Scene {
         
         // Check for level intro dialog
         if (DialogConfig.hasDialog(this.levelNumber, 'intro')) {
-            // Level 1: start with warp intro before showing dialog
-            if (this.levelNumber === 1) {
+            // Level 1 & 3: start with warp intro before showing dialog
+            if (this.levelNumber === 1 || this.levelNumber === 3) {
                 this.startWarpIntro();
             }
             // Show intro dialog before starting waves
@@ -456,6 +456,28 @@ class Level1Scene extends Phaser.Scene {
         return this.safeAreaOffset;
     }
 
+    getPlanetY() {
+        // Place the planet center at the visible bottom of the canvas so exactly
+        // the top half of the planet peeks from the bottom of the play area.
+        //
+        // On mobile Safari (browser mode), the tab / nav bar overlays the bottom of
+        // the canvas without reducing window.innerHeight (cameraHeight).
+        // window.visualViewport.height gives the truly-visible CSS height and is the
+        // same unit as game pixels in RESIZE mode, so it equals the actual bottom edge.
+        //
+        // We also need to handle the iOS Safari quirk noted in getSafeAreaOffset():
+        // visualViewport.height sometimes equals cameraHeight even when the toolbar is
+        // overlapping content.  WARBIRD_VIEWPORT_SAFE_PX (90px) is the same fallback
+        // used by getWarbirdY() / getSentinelY() to clear that ~83px of browser chrome.
+        const bottomChrome = window.visualViewport
+            ? Math.max(0, this.cameraHeight - window.visualViewport.height)
+            : 0;
+        const clearance = this.isMobileDevice
+            ? Math.max(bottomChrome, WARBIRD_VIEWPORT_SAFE_PX)
+            : bottomChrome;
+        return this.cameraHeight - clearance;
+    }
+
     getWarbirdY(enemy) {
         // Compute the warbird centre Y so that its bottom edge sits WARBIRD_SPAWN_BOTTOM_MARGIN
         // pixels above the VISIBLE bottom of the canvas.
@@ -518,8 +540,7 @@ class Level1Scene extends Phaser.Scene {
         if (this.planetSprite && this.levelNumber === 3) {
             const planetScale = this.cameraWidth / 576;
             this.planetSprite.setScale(planetScale);
-            // Position at viewport bottom for consistent top-half visibility
-            this.planetSprite.setPosition(this.cameraWidth / 2, this.cameraHeight);
+            this.planetSprite.setPosition(this.cameraWidth / 2, this.getPlanetY());
         }
         
         // Update world bounds - on mobile constrain bottom to visible area above controls
@@ -615,12 +636,15 @@ class Level1Scene extends Phaser.Scene {
         
         // Level 3: Add planet under siege at bottom of screen
         if (this.levelNumber === 3) {
-            // Add planet sprite - show only top half by positioning it below viewport
-            // The planet image is 576x574, we want top half visible
+            // Add planet sprite - show only top half by positioning its center at the
+            // bottom edge of the VISIBLE canvas.  On desktop and standalone-PWA the canvas
+            // fills the full viewport, so the planet center sits at cameraHeight.  On
+            // mobile Safari (browser mode) the canvas extends behind the toolbar/home
+            // indicator, so we subtract getSafeAreaOffset() to land at the actual visible
+            // bottom of the game area.
             const planetScale = this.cameraWidth / 576; // Scale to fit screen width
-            // Position planet center at viewport bottom so exactly top half is visible
-            // This ensures consistent visibility across all screen sizes
-            this.planetSprite = this.add.sprite(this.cameraWidth / 2, this.cameraHeight, 'planet-under-siege');
+            const planetY = this.getPlanetY();
+            this.planetSprite = this.add.sprite(this.cameraWidth / 2, planetY, 'planet-under-siege');
             this.planetSprite.setScale(planetScale);
             this.planetSprite.setDepth(-1); // Behind game objects, same as nebula
             this.planetSprite.setAlpha(0.9); // Slightly transparent
@@ -667,9 +691,12 @@ class Level1Scene extends Phaser.Scene {
         this.uiCamera = this.cameras.add(0, 0, this.cameraWidth, this.cameraHeight).setName('ui');
 
         // Tell the uiCamera to ignore world objects — they are handled by the main camera.
+        // planetSprite (Level 3) is a world-space object and must also be excluded from
+        // the uiCamera so it is never double-rendered at conflicting screen positions.
         this.uiCamera.ignore([
             this.starsLayer, this.nebulaLayer, this.warpStarsLayer,
-            this.player, this.playerShieldBar, this.playerHealthBar
+            this.player, this.playerShieldBar, this.playerHealthBar,
+            this.planetSprite
         ].filter(Boolean));
 
         // All scrollFactor=0 HUD elements must be ignored by the main camera while it is
@@ -698,6 +725,7 @@ class Level1Scene extends Phaser.Scene {
         // scrollFixedHud elements are reused here to avoid duplicating the list.
         this.warpFadeInObjects = [
             this.starsLayer, this.playerShieldBar, this.playerHealthBar,
+            this.planetSprite,
             ...scrollFixedHud
         ].filter(Boolean);
 
@@ -745,8 +773,11 @@ class Level1Scene extends Phaser.Scene {
             this.warpState = null;
         }
 
-        // Zoom camera back out to normal gameplay zoom
+        // Zoom camera back out to normal gameplay zoom and simultaneously pan to the
+        // gameplay-center position so world objects (e.g. the planet on Level 3) are
+        // already at their correct screen positions when the dialog closes.
         this.cameras.main.zoomTo(DialogConfig.camera.normalZoom, WARP_ZOOM_OUT_DURATION, 'Sine.easeOut');
+        this.cameras.main.pan(this.cameraWidth / 2, this.cameraHeight / 2, WARP_ZOOM_OUT_DURATION, 'Sine.easeOut');
 
         // Smoothly decelerate star scroll speed back to normal
         this.tweens.add({
@@ -5314,6 +5345,11 @@ class Level1Scene extends Phaser.Scene {
             this.exitWarp();
         }
 
+        // Level 3 warp-out: trigger after Captain Thorne says "set course for New Horizon" (index 2)
+        if (this.levelNumber === 3 && state.currentIndex === 3 && this.warpState === 'active') {
+            this.exitWarp();
+        }
+
         const message = state.dialogData.sequence[state.currentIndex];
 
         if (message.audio && this.cache.audio.exists(message.audio)) {
@@ -5746,9 +5782,17 @@ class Level1Scene extends Phaser.Scene {
         // This handles the case where the user advances through all dialogs before
         // the zoom-out animation (WARP_ZOOM_OUT_DURATION) finishes.
         if (this.uiCamera || this.warpHudObjects) {
-            // Make sure fade-in objects are visible before we hand off to main camera
+            // Make sure fade-in objects are visible before we hand off to main camera.
+            // Kill any running warp-exit tween first so it cannot overwrite the alpha=1
+            // we are about to set (this prevents the planet/HUD from fading back to an
+            // intermediate value when the user closes dialog before the 2s tween completes).
             if (this.warpFadeInObjects) {
-                this.warpFadeInObjects.forEach(obj => { if (obj && obj.active) obj.setAlpha(1); });
+                this.warpFadeInObjects.forEach(obj => {
+                    if (obj && obj.active) {
+                        this.tweens.killTweensOf(obj);
+                        obj.setAlpha(1);
+                    }
+                });
             }
             this._cleanupWarpCamera();
         }
