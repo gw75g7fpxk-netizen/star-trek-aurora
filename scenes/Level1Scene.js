@@ -456,19 +456,9 @@ class Level1Scene extends Phaser.Scene {
     }
 
     getPlanetY() {
-        // Return the world Y at which the planet center should be placed so that
-        // exactly the top half of the planet peeks from the bottom of the VISIBLE canvas.
-        // • Desktop / standalone PWA: canvas == viewport, so planet center at cameraHeight.
-        // • Mobile Safari (browser mode): canvas extends behind browser toolbar/home bar
-        //   by getSafeAreaOffset() pixels, so we subtract that to land at the real
-        //   visible-bottom edge.
-        if (this.isMobileDevice) {
-            const isStandalone = window.navigator.standalone === true ||
-                window.matchMedia('(display-mode: standalone)').matches;
-            if (!isStandalone) {
-                return this.cameraHeight - this.getSafeAreaOffset();
-            }
-        }
+        // Place the planet center at the canvas bottom so exactly the top half
+        // is visible.  cameras.main.height (= cameraHeight) equals the canvas height,
+        // so a world object at that Y sits right at the bottom edge of the canvas.
         return this.cameraHeight;
     }
 
