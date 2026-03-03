@@ -279,6 +279,8 @@ class Level1Scene extends Phaser.Scene {
         // Picard Maneuver state
         this.picardManeuverActive = false;
         this.picardGhostShip = null;
+        this.lastPicardManeuverFired = -PlayerConfig.picardManeuverCooldown; // Ready immediately
+        // picardManeuverUnlocked is set by initializeWeaponSystems() via applyUpgrades()
         
         // Level 7: Romulan warbird cloaking state
         this.warbirdCloakCount = 0;        // How many times the warbird has cloaked
@@ -563,6 +565,14 @@ class Level1Scene extends Phaser.Scene {
         if (this.torpedoIcon) {
             this.torpedoIcon.x = this.cameraWidth - 80;
             this.torpedoIcon.y = this.cameraHeight - safeAreaOffset - 115;
+        }
+        if (this.picardButton) {
+            this.picardButton.x = this.cameraWidth - 80;
+            this.picardButton.y = this.cameraHeight - safeAreaOffset - 215;
+        }
+        if (this.picardIcon) {
+            this.picardIcon.x = this.cameraWidth - 80;
+            this.picardIcon.y = this.cameraHeight - safeAreaOffset - 215;
         }
         
         // Update joystick zone size
@@ -853,6 +863,9 @@ class Level1Scene extends Phaser.Scene {
         // Torpedo key (T)
         this.torpedoKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.T);
         
+        // Picard Maneuver key (P)
+        this.picardKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P);
+        
         // Pause key (ESC)
         this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
         this.escKey.on('down', () => {
@@ -878,6 +891,7 @@ class Level1Scene extends Phaser.Scene {
         this.isFiring = false;
         this.autoFire = false;
         this.isTorpedoFiring = false;
+        this.isPicardFiring = false;
         this.joystickActive = false;
         this.joystickVector = { x: 0, y: 0 };
         
@@ -1069,6 +1083,50 @@ class Level1Scene extends Phaser.Scene {
         this.torpedoButton.on('pointerout', () => {
             this.isTorpedoFiring = false;
             this.torpedoButton.setAlpha(0.4);
+        });
+        
+        // Picard Maneuver button (above torpedo button) — only visible when upgrade unlocked
+        const picardButtonRadius = 40;
+        const picardButtonX = buttonX;
+        const picardButtonY = torpButtonY - 100;
+        
+        this.picardButton = this.add.circle(picardButtonX, picardButtonY, picardButtonRadius, 0xFF8800, 0.4);
+        this.picardButton.setScrollFactor(0);
+        this.picardButton.setDepth(1000);
+        this.picardButton.setInteractive();
+        this.picardButton.setVisible(false); // Shown only when upgrade is unlocked
+        
+        // Picard Maneuver charge ring
+        this.picardButtonRing = this.add.graphics();
+        this.picardButtonRing.setScrollFactor(0);
+        this.picardButtonRing.setDepth(1002);
+        this.picardButtonRing.setVisible(false);
+        
+        // Picard button icon
+        this.picardIcon = this.add.text(picardButtonX, picardButtonY, 'PICARD', {
+            fontSize: '11px',
+            color: '#FFFFFF',
+            fontFamily: 'Arial',
+            fontStyle: 'bold'
+        });
+        this.picardIcon.setOrigin(0.5);
+        this.picardIcon.setScrollFactor(0);
+        this.picardIcon.setDepth(1001);
+        this.picardIcon.setVisible(false);
+        
+        this.picardButton.on('pointerdown', () => {
+            this.isPicardFiring = true;
+            this.picardButton.setAlpha(0.8);
+        });
+        
+        this.picardButton.on('pointerup', () => {
+            this.isPicardFiring = false;
+            this.picardButton.setAlpha(0.4);
+        });
+        
+        this.picardButton.on('pointerout', () => {
+            this.isPicardFiring = false;
+            this.picardButton.setAlpha(0.4);
         });
     }
 
@@ -1505,6 +1563,9 @@ class Level1Scene extends Phaser.Scene {
         // Update torpedo button charge ring
         this.updateTorpedoButton(time);
         
+        // Update Picard Maneuver button charge ring
+        this.updatePicardButton(time);
+        
         // Update USS Sentinel (Level 5 & 8)
         if ((this.levelNumber === 5 || this.levelNumber === 8) && this.sentinel && this.sentinel.active) {
             this.updateSentinel(time);
@@ -1710,6 +1771,16 @@ class Level1Scene extends Phaser.Scene {
                 this.lastTorpedoFired = time;
             }
         }
+        
+        // Handle Picard Maneuver (P key or Picard button) - only if upgrade unlocked
+        if (this.picardManeuverUnlocked) {
+            if (Phaser.Input.Keyboard.JustDown(this.picardKey) || this.isPicardFiring) {
+                if (time > this.lastPicardManeuverFired + PlayerConfig.picardManeuverCooldown) {
+                    this.activatePicardManeuver();
+                    this.lastPicardManeuverFired = time;
+                }
+            }
+        }
     }
 
     fireBullet() {
@@ -1822,6 +1893,49 @@ class Level1Scene extends Phaser.Scene {
                 this.torpedoButtonRing.beginPath();
                 this.torpedoButtonRing.arc(x, y, ringRadius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * chargePercent, false);
                 this.torpedoButtonRing.strokePath();
+            }
+        }
+    }
+    
+    updatePicardButton(time) {
+        if (!this.picardButtonRing || !this.picardButton) return;
+        
+        this.picardButtonRing.clear();
+        
+        if (!this.picardButton.visible) return;
+        
+        const cooldown = PlayerConfig.picardManeuverCooldown;
+        const elapsed = time - this.lastPicardManeuverFired;
+        const chargePercent = Math.min(elapsed / cooldown, 1);
+        
+        const x = this.picardButton.x;
+        const y = this.picardButton.y;
+        const ringRadius = 46;
+        
+        if (this.picardManeuverActive) {
+            // Pulsing orange ring while active
+            this.picardButtonRing.lineStyle(4, 0xFF8800, 1);
+            this.picardButtonRing.beginPath();
+            this.picardButtonRing.arc(x, y, ringRadius, 0, Math.PI * 2, false);
+            this.picardButtonRing.strokePath();
+        } else if (chargePercent >= 1) {
+            // Fully charged - bright ring indicating ready to use
+            this.picardButtonRing.lineStyle(4, 0xFF8800, 1);
+            this.picardButtonRing.beginPath();
+            this.picardButtonRing.arc(x, y, ringRadius, 0, Math.PI * 2, false);
+            this.picardButtonRing.strokePath();
+        } else {
+            // Partial ring showing charge progress
+            this.picardButtonRing.lineStyle(2, 0x663300, 0.4);
+            this.picardButtonRing.beginPath();
+            this.picardButtonRing.arc(x, y, ringRadius, 0, Math.PI * 2, false);
+            this.picardButtonRing.strokePath();
+            
+            if (chargePercent > 0) {
+                this.picardButtonRing.lineStyle(4, 0xFF8800, 0.9);
+                this.picardButtonRing.beginPath();
+                this.picardButtonRing.arc(x, y, ringRadius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * chargePercent, false);
+                this.picardButtonRing.strokePath();
             }
         }
     }
@@ -2662,21 +2776,13 @@ class Level1Scene extends Phaser.Scene {
                 });
                 // Tractor beam effect - attract power-ups and pods
                 break;
-            case 'picard_maneuver':
-                this.activatePicardManeuver(this.time.now + config.duration);
-                this.activePowerUps.push({
-                    type: type,
-                    effect: config.effect,
-                    endTime: this.time.now + config.duration
-                });
-                break;
         }
         
         console.log(`Power-up applied: ${config.name}`);
     }
     
-    activatePicardManeuver(endTime) {
-        // If already active (e.g. collected a second power-up), don't create a duplicate ghost ship
+    activatePicardManeuver() {
+        // If already active, ignore (shouldn't be possible via cooldown, but safety guard)
         if (this.picardManeuverActive) {
             return;
         }
@@ -2690,6 +2796,11 @@ class Level1Scene extends Phaser.Scene {
         );
         this.picardGhostShip.setScale(PlayerConfig.scale);
         this.picardGhostShip.setAlpha(PICARD_MANEUVER_GHOST_ALPHA);
+        
+        // Auto-deactivate after duration
+        this.time.delayedCall(PlayerConfig.picardManeuverDuration, () => {
+            this.deactivatePicardManeuver();
+        });
         
         console.log('Picard Maneuver activated!');
     }
@@ -4010,13 +4121,7 @@ class Level1Scene extends Phaser.Scene {
     }
     
     spawnPowerUp(x, y) {
-        // Filter power-up types based on what's unlocked
-        const types = Object.keys(PowerUpConfig.types).filter(type => {
-            if (type === 'picardManeuver') {
-                return (this.saveData.upgrades.picardManeuver || 0) > 0;
-            }
-            return true;
-        });
+        const types = Object.keys(PowerUpConfig.types);
         const randomType = Phaser.Utils.Array.GetRandom(types);
         const config = PowerUpConfig.types[randomType];
         
@@ -4025,7 +4130,6 @@ class Level1Scene extends Phaser.Scene {
         if (randomType === 'speedBoost') texture = 'powerup-speed';
         if (randomType === 'dilithium') texture = 'powerup-dilithium';
         if (randomType === 'tractorBeam') texture = 'powerup-tractor';
-        if (randomType === 'picardManeuver') texture = 'powerup-picard';
         
         const powerUp = this.powerUps.get(x, y, texture);
         
@@ -4777,15 +4881,6 @@ class Level1Scene extends Phaser.Scene {
                     case 'score_multiplier':
                         this.scoreMultiplier /= powerUp.multiplierAmount;
                         break;
-                    case 'picard_maneuver':
-                        // Only deactivate if no other picard_maneuver power-ups are still active
-                        const otherPicardManeuvers = this.activePowerUps.filter(
-                            p => p.effect === 'picard_maneuver' && p !== powerUp
-                        );
-                        if (otherPicardManeuvers.length === 0) {
-                            this.deactivatePicardManeuver();
-                        }
-                        break;
                 }
                 return false;
             }
@@ -5041,6 +5136,15 @@ class Level1Scene extends Phaser.Scene {
             this.pointDefenseLastFired = -this.pointDefenseStats.cooldown
         } else {
             this.pointDefenseLastFired = 0
+        }
+        
+        // Picard Maneuver — track unlock state and show mobile button if applicable
+        const picardLevel = this.saveData.upgrades.picardManeuver || 0
+        this.picardManeuverUnlocked = picardLevel > 0
+        if (this.picardManeuverUnlocked && this.isMobileDevice) {
+            if (this.picardButton) this.picardButton.setVisible(true)
+            if (this.picardIcon) this.picardIcon.setVisible(true)
+            if (this.picardButtonRing) this.picardButtonRing.setVisible(true)
         }
     }
 

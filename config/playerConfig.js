@@ -21,6 +21,10 @@ const PlayerConfig = {
     torpedoDamage: 3,      // damage per torpedo hit
     sentinelTorpedoVolleyCount: 5, // Number of torpedoes the USS Sentinel fires per volley
     
+    // Picard Maneuver Configuration
+    picardManeuverCooldown: 45000, // 45 seconds between uses
+    picardManeuverDuration: 5000,  // Duration of the split effect (5 seconds)
+    
     // Starting position (will be calculated relative to screen size)
     startX: 0.5, // 50% of screen width
     startY: 0.75  // 75% of screen height (adjusted for mobile safe area)

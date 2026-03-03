@@ -44,14 +44,6 @@ const PowerUpConfig = {
             duration: 10000, // 10 seconds
             color: 0x0088FF,
             points: 150
-        },
-        picardManeuver: {
-            name: 'Picard Maneuver',
-            effect: 'picard_maneuver',
-            amount: 0,
-            duration: 5000, // 5 seconds
-            color: 0xFF8800,
-            points: 250
         }
     },
     
