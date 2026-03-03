@@ -456,10 +456,25 @@ class Level1Scene extends Phaser.Scene {
     }
 
     getPlanetY() {
-        // Place the planet center at the canvas bottom so exactly the top half
-        // is visible.  cameras.main.height (= cameraHeight) equals the canvas height,
-        // so a world object at that Y sits right at the bottom edge of the canvas.
-        return this.cameraHeight;
+        // Place the planet center at the visible bottom of the canvas so exactly
+        // the top half of the planet peeks from the bottom of the play area.
+        //
+        // On mobile Safari (browser mode), the tab / nav bar overlays the bottom of
+        // the canvas without reducing window.innerHeight (cameraHeight).
+        // window.visualViewport.height gives the truly-visible CSS height and is the
+        // same unit as game pixels in RESIZE mode, so it equals the actual bottom edge.
+        //
+        // We also need to handle the iOS Safari quirk noted in getSafeAreaOffset():
+        // visualViewport.height sometimes equals cameraHeight even when the toolbar is
+        // overlapping content.  WARBIRD_VIEWPORT_SAFE_PX (90px) is the same fallback
+        // used by getWarbirdY() / getSentinelY() to clear that ~83px of browser chrome.
+        const bottomChrome = window.visualViewport
+            ? Math.max(0, this.cameraHeight - window.visualViewport.height)
+            : 0;
+        const clearance = this.isMobileDevice
+            ? Math.max(bottomChrome, WARBIRD_VIEWPORT_SAFE_PX)
+            : bottomChrome;
+        return this.cameraHeight - clearance;
     }
 
     getWarbirdY(enemy) {
