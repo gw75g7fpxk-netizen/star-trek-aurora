@@ -699,7 +699,8 @@ class Level1Scene extends Phaser.Scene {
             this.pauseButton, this.pauseButtonBg,
             this.joystickBase, this.joystickStick,
             this.fireButton, this.fireIcon,
-            this.torpedoButton, this.torpedoButtonRing, this.torpedoIcon
+            this.torpedoButton, this.torpedoButtonRing, this.torpedoIcon,
+            this.picardButton, this.picardIcon, this.picardButtonRing
         ].filter(Boolean);
 
         // cameraFilter is a bitmask initialized to 0 by Phaser for every game object.
@@ -1130,7 +1131,8 @@ class Level1Scene extends Phaser.Scene {
         });
         
         // Show Picard button if the upgrade was already purchased before this scene loaded
-        if (this.picardManeuverUnlocked && this.isMobileDevice) {
+        const picardSavedLevel = (this.saveData && this.saveData.upgrades && this.saveData.upgrades.picardManeuver) || 0
+        if (picardSavedLevel > 0 && this.isMobileDevice) {
             this.picardButton.setVisible(true);
             this.picardIcon.setVisible(true);
             this.picardButtonRing.setVisible(true);
