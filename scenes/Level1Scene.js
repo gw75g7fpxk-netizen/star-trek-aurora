@@ -2532,17 +2532,11 @@ class Level1Scene extends Phaser.Scene {
         console.log('Level1Scene: Skipping to next wave (testing feature)');
         
         // Special handling for Level 7 Romulan warbird fight.
-        // The generic isFinalWave path would skip straight to the outro because Level 7 only
-        // has wave1 (the warbird) and no wave2 — so skip must advance through warbird phases.
-        // Note: isFinalWave is false during wave1's 60-second timer, so we check levelNumber only.
+        // Skip clears all non-warbird enemies/hazards so the player can focus on the warbird.
+        // If the warbird hasn't spawned yet it is brought in immediately.
+        // Note: isFinalWave stays false during wave1's 60-second timer, so check levelNumber only.
         if (this.levelNumber === 7) {
-            // Find the warbird if it is already on screen
-            let warbird = null;
-            this.enemies.children.each(enemy => {
-                if (enemy.active && enemy.enemyType === 'romulanWarbird') { warbird = enemy; }
-            });
-
-            // Clear all non-warbird enemies and hazards, matching the generic skip behaviour
+            // Clear all non-warbird enemies and hazards
             this.enemies.getChildren().filter(e => e.active && e.enemyType !== 'romulanWarbird').forEach(e => {
                 if (e.healthBar) { e.healthBar.destroy(); e.healthBar = null; }
                 e.destroy();
@@ -2551,11 +2545,15 @@ class Level1Scene extends Phaser.Scene {
             this.escapePods.clear(true, true);
             this.powerUps.clear(true, true);
 
+            // Check whether the warbird is already on screen
+            let warbird = null;
+            this.enemies.children.each(enemy => {
+                if (enemy.active && enemy.enemyType === 'romulanWarbird') { warbird = enemy; }
+            });
+
             if (!warbird) {
-                // Warbird hasn't spawned yet — clear wave1's spawn timer and spawn it immediately
-                console.log('Level1Scene: Level7 - fast-forwarding to warbird spawn');
-                this.enemies.clear(true, true);
-                this.enemyBullets.clear(true, true);
+                // Warbird hasn't spawned yet — cancel the wave timer and spawn it immediately
+                console.log('Level1Scene: Level7 skip - spawning warbird immediately');
                 if (this.waveTimer) { this.waveTimer.remove(); this.waveTimer = null; }
                 if (this.podTimer) { this.podTimer.remove(); this.podTimer = null; }
                 this.cleanupCommunicationState();
@@ -2563,39 +2561,6 @@ class Level1Scene extends Phaser.Scene {
                 this.isFinalWave = true;
                 this.waveSpawnPool = null;
                 this.spawnEnemy(WaveConfig.level7.wave1);
-                return;
-            }
-
-            // Warbird just spawned but is still in its initial cloaked state (not yet decloaked)
-            if (warbird.isCloaked && !this.warbirdCloakWaveActive) {
-                console.log('Level1Scene: Level7 - decloaking warbird immediately');
-                this.isFinalWave = true;
-                this.triggerWarbirdDecloaking(warbird);
-                return;
-            }
-
-            // A cloak wave is in progress — decloak the warbird (escorts already cleared above)
-            if (this.warbirdCloakWaveActive) {
-                console.log('Level1Scene: Level7 - skipping cloak wave, decloaking warbird');
-                this.warbirdCloakWaveActive = false;
-                this.warbirdCloakWaveSpawned = this.warbirdCloakWaveTotal;
-                this.enemies.children.each(enemy => {
-                    if (enemy.active && enemy.enemyType === 'romulanWarbird' && enemy.isCloaked) {
-                        this.triggerWarbirdDecloaking(enemy);
-                    }
-                });
-                return;
-            }
-
-            // Warbird is decloaked — advance to the next phase
-            if (!this.sentinelRescueTriggered) {
-                if (this.warbirdCloakCount < WARBIRD_CLOAK_MAX_COUNT) {
-                    console.log(`Level1Scene: Level7 - triggering warbird cloak ${this.warbirdCloakCount + 1}`);
-                    this.triggerWarbirdCloaking(warbird);
-                } else {
-                    console.log('Level1Scene: Level7 - triggering Sentinel rescue sequence');
-                    this.triggerSentinelRescue(warbird);
-                }
             }
             return;
         }
