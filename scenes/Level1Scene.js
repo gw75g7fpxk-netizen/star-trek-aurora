@@ -1486,6 +1486,7 @@ class Level1Scene extends Phaser.Scene {
         
         // Handle point defense system
         this.handlePointDefense(time);
+        this.updatePointDefenseBeam();
         
         // Handle player movement
         this.handlePlayerMovement();
@@ -1597,9 +1598,14 @@ class Level1Scene extends Phaser.Scene {
             beam.lineStyle(2, SENTINEL_BEAM_COLOR, 1)
             beam.lineBetween(this.player.x, this.player.y, closestBullet.x, closestBullet.y)
 
+            // Store beam reference so it tracks the player's movement each frame (target is already destroyed)
+            this.activePointDefenseBeam = { graphics: beam, targetX: closestBullet.x, targetY: closestBullet.y }
+
             // Hold beam for active duration then fade out (total 1 second, matching point-defense-sound)
             this.time.delayedCall(POINT_DEFENSE_BEAM_ACTIVE_DURATION, () => {
                 if (!beam.active) return
+                // Stop live tracking during fade so the frozen image fades cleanly
+                this.activePointDefenseBeam = null
                 this.tweens.add({
                     targets: beam,
                     alpha: 0,
@@ -1629,6 +1635,16 @@ class Level1Scene extends Phaser.Scene {
             
             console.log('Point defense activated!')
         }
+    }
+
+    updatePointDefenseBeam() {
+        if (!this.activePointDefenseBeam) return
+        const { graphics, targetX, targetY } = this.activePointDefenseBeam
+        if (!graphics.active) { this.activePointDefenseBeam = null; return }
+        // Redraw with current player position so beam follows the player as they move
+        graphics.clear()
+        graphics.lineStyle(2, SENTINEL_BEAM_COLOR, 1)
+        graphics.lineBetween(this.player.x, this.player.y, targetX, targetY)
     }
     
     handleInvulnerabilityVisuals() {
