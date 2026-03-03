@@ -43,6 +43,10 @@ const ProgressConfig = {
         try {
             localStorage.setItem('starTrekAdventuresProgress', JSON.stringify(data))
             console.log('Progress saved successfully')
+            // Also sync to PlayFab cloud when the user is logged in
+            if (typeof PlayFabManager !== 'undefined') {
+                PlayFabManager.saveProgressToCloud(data)
+            }
             return true
         } catch (e) {
             console.warn('Failed to save progress:', e)
@@ -141,5 +145,55 @@ const ProgressConfig = {
         
         console.log(`Session points earned: ${totalPoints} (Score: ${scorePoints}, Pods: ${podPoints}, Waves: ${wavePoints})`)
         return totalPoints
+    },
+
+    // Merge two save data objects, keeping the best progress from each.
+    // Used when syncing cloud saves with local saves after login.
+    mergeProgress(local, cloud) {
+        if (!cloud) return local
+        if (!local) return cloud
+        const merged = structuredClone(local)
+        // Union of unlocked levels
+        const allLevels = new Set([...local.unlockedLevels, ...cloud.unlockedLevels])
+        merged.unlockedLevels = Array.from(allLevels).sort((a, b) => a - b)
+        // Best upgrade point total
+        merged.upgradePoints = Math.max(local.upgradePoints || 0, cloud.upgradePoints || 0)
+        // Best level stats from either source
+        for (const key of Object.keys(cloud.levelStats || {})) {
+            if (!merged.levelStats[key]) {
+                merged.levelStats[key] = cloud.levelStats[key]
+            } else {
+                merged.levelStats[key].highScore = Math.max(
+                    merged.levelStats[key].highScore || 0,
+                    cloud.levelStats[key].highScore || 0
+                )
+            }
+        }
+        // Highest upgrade tier from either source (includes new keys added by cloud)
+        for (const key of Object.keys(cloud.upgrades || {})) {
+            merged.upgrades[key] = Math.max(merged.upgrades[key] || 0, cloud.upgrades[key] || 0)
+        }
+        return merged
+    },
+
+    // After login: fetch cloud progress, merge with local, and persist the result.
+    // callback(mergedData) is called when complete (mergedData may be null on error).
+    syncFromCloud(callback) {
+        if (typeof PlayFabManager === 'undefined' || !PlayFabManager.isLoggedIn) {
+            if (callback) callback(null)
+            return
+        }
+        PlayFabManager.loadProgressFromCloud((error, cloudData) => {
+            if (error) {
+                console.warn('PlayFab: Failed to load cloud progress —', error.message)
+                if (callback) callback(null)
+                return
+            }
+            const localData = this.loadProgress()
+            const merged = this.mergeProgress(localData, cloudData)
+            this.saveProgress(merged)
+            console.log('PlayFab: Progress synced from cloud')
+            if (callback) callback(merged)
+        })
     }
 }

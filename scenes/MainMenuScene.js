@@ -67,11 +67,12 @@ class MainMenuScene extends Phaser.Scene {
         const btnGap = isMobile ? 14 : 18
         const topPad = isMobile ? 16 : 24
         const FOOTER_HEIGHT = 60  // reserved space at the bottom for high score + version
-        // Total vertical space needed for both buttons + info rows + gap
-        const totalBtnBlock = 2 * btnH + 2 * infoGap + 2 * infoH + btnGap
+        // Total vertical space needed for three buttons + info rows + gaps
+        const totalBtnBlock = 3 * btnH + 3 * infoGap + 3 * infoH + 2 * btnGap
         const maxBtnStart = height - totalBtnBlock - FOOTER_HEIGHT
         const btn1Y = Math.min(lowerBlackStart + topPad, maxBtnStart)
         const btn2Y = btn1Y + btnH + infoGap + infoH + btnGap
+        const btn3Y = btn2Y + btnH + infoGap + infoH + btnGap
 
         // Mission Select button
         const btn1 = this.createLcarsButton(
@@ -118,6 +119,28 @@ class MainMenuScene extends Phaser.Scene {
             fontFamily: lcarsFont
         }).setOrigin(0.5)
 
+        // Crew Login button – shows login modal; label reflects current auth state
+        const isLoggedIn = typeof PlayFabManager !== 'undefined' && PlayFabManager.isLoggedIn
+        const btn3Label = isLoggedIn ? 'CREW: CONNECTED' : 'CREW LOGIN'
+        const btn3Color = isLoggedIn ? 0x00AAAA : 0x445566
+        const btn3InfoText = isLoggedIn
+            ? `Signed in as ${PlayFabManager.displayName || PlayFabManager.playFabId || 'crew member'}`
+            : 'Login to sync saves across devices'
+        const btn3 = this.createLcarsButton(
+            width / 2, btn3Y, btnW, btnH, btnRadius, lcarsFont,
+            btn3Label, btn3Color, '#FFFFFF',
+            () => {
+                if (typeof LoginModal !== 'undefined') {
+                    LoginModal.show(() => { this.scene.restart() })
+                }
+            }
+        )
+        const btn3Info = this.add.text(width / 2, btn3Y + btnH + infoGap, btn3InfoText, {
+            fontSize: infoSize,
+            color: '#88CCCC',
+            fontFamily: lcarsFont
+        }).setOrigin(0.5)
+
         // ── Footer – high score & version ──
         const highScore = this.getHighScore()
         this.add.text(width / 2, height - (isMobile ? 50 : 40), `High Score: ${highScore}`, {
@@ -141,7 +164,8 @@ class MainMenuScene extends Phaser.Scene {
         // stay at full alpha (they are present on the upgrades screen too).
         const fadeGroups = [
             [btn1.bg, btn1.text, btn1Info],
-            [btn2.bg, btn2.text, btn2Info]
+            [btn2.bg, btn2.text, btn2Info],
+            [btn3.bg, btn3.text, btn3Info]
         ]
         fadeGroups.forEach((group, i) => {
             group.forEach(el => el.setAlpha(0))
