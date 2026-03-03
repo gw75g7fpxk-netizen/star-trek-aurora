@@ -517,8 +517,8 @@ class Level1Scene extends Phaser.Scene {
         if (this.planetSprite && this.levelNumber === 3) {
             const planetScale = this.cameraWidth / 576;
             this.planetSprite.setScale(planetScale);
-            // Position at viewport bottom for consistent top-half visibility
-            this.planetSprite.setPosition(this.cameraWidth / 2, this.cameraHeight);
+            // Keep planet center at the visible gameplay bottom (above browser chrome)
+            this.planetSprite.setPosition(this.cameraWidth / 2, this.cameraHeight - this.getSafeAreaOffset());
         }
         
         // Update world bounds - on mobile constrain bottom to visible area above controls
@@ -614,12 +614,13 @@ class Level1Scene extends Phaser.Scene {
         
         // Level 3: Add planet under siege at bottom of screen
         if (this.levelNumber === 3) {
-            // Add planet sprite - show only top half by positioning it below viewport
-            // The planet image is 576x574, we want top half visible
+            // Add planet sprite - show only top half by positioning it at the gameplay
+            // area bottom.  On mobile Safari cameraHeight includes the browser chrome, so
+            // we subtract getSafeAreaOffset() to land at the actual visible bottom edge.
+            // The planet image is 576x574, we want top half visible.
             const planetScale = this.cameraWidth / 576; // Scale to fit screen width
-            // Position planet center at viewport bottom so exactly top half is visible
-            // This ensures consistent visibility across all screen sizes
-            this.planetSprite = this.add.sprite(this.cameraWidth / 2, this.cameraHeight, 'planet-under-siege');
+            const planetY = this.cameraHeight - this.getSafeAreaOffset();
+            this.planetSprite = this.add.sprite(this.cameraWidth / 2, planetY, 'planet-under-siege');
             this.planetSprite.setScale(planetScale);
             this.planetSprite.setDepth(-1); // Behind game objects, same as nebula
             this.planetSprite.setAlpha(0.9); // Slightly transparent
