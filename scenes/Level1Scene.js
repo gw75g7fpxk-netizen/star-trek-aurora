@@ -47,7 +47,7 @@ const ESCAPE_POD_SPAWN_Y = -20;
 const SCOUT_CIRCLE_TRIGGER_FRACTION = 3; // Start circling at 1/3 of screen height
 
 // Picard Maneuver constants
-const PICARD_MANEUVER_SPLIT_OFFSET = 25; // X offset for the ghost ship (pixels)
+const PICARD_MANEUVER_SPLIT_OFFSET = 60; // X offset for the ghost ship (pixels)
 const PICARD_MANEUVER_GHOST_ALPHA = 0.85; // Opacity of the ghost ship image
 
 // Shield impact effect constants
@@ -568,11 +568,11 @@ class Level1Scene extends Phaser.Scene {
         }
         if (this.picardButton) {
             this.picardButton.x = this.cameraWidth - 80;
-            this.picardButton.y = this.cameraHeight - safeAreaOffset - 215;
+            this.picardButton.y = this.cameraHeight - safeAreaOffset - 230;
         }
         if (this.picardIcon) {
             this.picardIcon.x = this.cameraWidth - 80;
-            this.picardIcon.y = this.cameraHeight - safeAreaOffset - 215;
+            this.picardIcon.y = this.cameraHeight - safeAreaOffset - 230;
         }
         
         // Update joystick zone size
@@ -1089,7 +1089,7 @@ class Level1Scene extends Phaser.Scene {
         // Picard Maneuver button (above torpedo button) — only visible when upgrade unlocked
         const picardButtonRadius = 40;
         const picardButtonX = buttonX;
-        const picardButtonY = torpButtonY - 100;
+        const picardButtonY = torpButtonY - 115;
         
         this.picardButton = this.add.circle(picardButtonX, picardButtonY, picardButtonRadius, 0xFF8800, 0.4);
         this.picardButton.setScrollFactor(0);
@@ -2797,18 +2797,29 @@ class Level1Scene extends Phaser.Scene {
         }
         this.picardManeuverActive = true;
         
-        // Create ghost ship image offset to the right of the player
-        this.picardGhostShip = this.add.image(
-            this.player.x + PICARD_MANEUVER_SPLIT_OFFSET,
-            this.player.y,
-            'player-ship'
-        );
-        this.picardGhostShip.setScale(PlayerConfig.scale);
-        this.picardGhostShip.setAlpha(PICARD_MANEUVER_GHOST_ALPHA);
+        // Play warp sound -- ghost ship appears after 1 second (sound duration)
+        try {
+            this.sound.play('picard-warp-sound', { volume: 0.8 });
+        } catch (e) {
+            console.warn('Failed to play picard warp sound:', e);
+        }
         
-        // Auto-deactivate after duration
-        this.time.delayedCall(PlayerConfig.picardManeuverDuration, () => {
-            this.deactivatePicardManeuver();
+        // Delay ghost ship creation by 1 second (sound duration)
+        this.time.delayedCall(1000, () => {
+            if (!this.picardManeuverActive || !this.player || !this.player.active) return;
+            // Create ghost ship image offset to the right of the player
+            this.picardGhostShip = this.add.image(
+                this.player.x + PICARD_MANEUVER_SPLIT_OFFSET,
+                this.player.y,
+                'player-ship'
+            );
+            this.picardGhostShip.setScale(PlayerConfig.scale);
+            this.picardGhostShip.setAlpha(PICARD_MANEUVER_GHOST_ALPHA);
+            
+            // Auto-deactivate after 5-second active duration
+            this.time.delayedCall(PlayerConfig.picardManeuverDuration, () => {
+                this.deactivatePicardManeuver();
+            });
         });
         
         console.log('Picard Maneuver activated!');

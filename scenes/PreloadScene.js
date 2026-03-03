@@ -203,6 +203,9 @@ class PreloadScene extends Phaser.Scene {
         // Load warp-out sound for level 1 intro sequence
         this.load.audio('warp-out-sound', 'assets/audio/tng_warp_out4.mp3');
         
+        // Load Picard Maneuver activation sound
+        this.load.audio('picard-warp-sound', 'assets/audio/tng_warp3_clean.mp3');
+        
         // Load LCARS button click sound
         this.load.audio('button-click', 'assets/audio/keyok3.mp3');
         
