@@ -78,35 +78,6 @@ const LoginModal = {
         })
     },
 
-    triggerApple() {
-        if (typeof PlayFabManager === 'undefined') {
-            this._setMessage('Service unavailable. Try again later.', '#FF6666')
-            return
-        }
-        this._setButtons(false)
-        this._setMessage('Connecting to Apple\u2026', '#AAAAEE')
-        PlayFabManager.loginWithApple((error, data) => {
-            this._setButtons(true)
-            if (error) {
-                this._setMessage(error.message, '#FF6666')
-                return
-            }
-            if (!data) {
-                // User cancelled the popup – clear the status message and return
-                this._setMessage('', '#AAAAEE')
-                return
-            }
-            this._setMessage('Login successful! Syncing\u2026', '#00CC88')
-            if (typeof ProgressConfig !== 'undefined') {
-                ProgressConfig.syncFromCloud(() => {
-                    setTimeout(() => this.hide(), 1200)
-                })
-            } else {
-                setTimeout(() => this.hide(), 1200)
-            }
-        })
-    },
-
     triggerLogout() {
         if (typeof PlayFabManager !== 'undefined') {
             PlayFabManager.logout()

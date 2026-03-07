@@ -92,7 +92,6 @@
         }
         .login-btn:hover { opacity: 0.85; }
         #btn-google-login { background: #4285F4; color: #fff; }
-        #btn-apple-login  { background: #fff;    color: #000; }
         #btn-logout       { background: #CC4444; color: #fff; }
         #btn-cancel       {
             display: block;
@@ -125,9 +124,6 @@
                 <button id="btn-google-login" class="login-btn" onclick="LoginModal.triggerGoogle()">
                     &#9654; Login with Google
                 </button>
-                <button id="btn-apple-login" class="login-btn" onclick="LoginModal.triggerApple()">
-                    &#63743; Login with Apple
-                </button>
             </div>
 
             <!-- Logged in: show status and logout -->
@@ -150,9 +146,6 @@
 
     <!-- Google Identity Services (async – available by first user interaction) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-
-    <!-- Apple Sign In with Apple JS SDK -->
-    <script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js" async defer></script>
     
     <!-- PlayFab & Login -->
     <script src="config/playfabConfig.js"></script>

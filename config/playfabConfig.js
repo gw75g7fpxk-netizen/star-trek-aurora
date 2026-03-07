@@ -3,16 +3,12 @@
 //
 // NOTE: Before deployment, configure OAuth credentials:
 //   Google: https://console.cloud.google.com/ → APIs & Services → Credentials → OAuth 2.0 Client ID (Web application)
-//   Apple:  https://developer.apple.com/ → Certificates, IDs & Profiles → Services IDs (Sign In with Apple)
 
 const PlayFabManager = {
     TITLE_ID: '1A2EEC',
 
     // Replace with your Google OAuth 2.0 Client ID (Web application type)
     GOOGLE_CLIENT_ID: '959296849138-3n2bpfspbkr04kk2s23p8era65fol16i.apps.googleusercontent.com',
-
-    // Replace with your Apple Services ID configured for Sign In with Apple
-    APPLE_SERVICE_ID: 'YOUR_APPLE_SERVICE_ID',
 
     isLoggedIn: false,
     playFabId: null,
@@ -25,7 +21,6 @@ const PlayFabManager = {
             PlayFab.settings.titleId = this.TITLE_ID
         }
         this._restoreSession()
-        this._initApple()
     },
 
     _restoreSession() {
@@ -71,21 +66,6 @@ const PlayFabManager = {
             PlayFab.settings.sessionTicket = sessionTicket
         }
         this._persistSession()
-    },
-
-    _initApple() {
-        if (typeof AppleID === 'undefined') return
-        try {
-            const redirectURI = window.location.href.split('#')[0].split('?')[0]
-            AppleID.auth.init({
-                clientId: this.APPLE_SERVICE_ID,
-                scope: 'name email',
-                redirectURI,
-                usePopup: true
-            })
-        } catch (e) {
-            console.warn('PlayFab: Apple Sign-In init failed', e)
-        }
     },
 
     // Log out the current user
@@ -145,49 +125,6 @@ const PlayFabManager = {
         }, (result, error) => {
             if (error) {
                 callback(new Error(error.errorMessage || 'PlayFab Google login failed'), null)
-                return
-            }
-            const name = result.data.InfoResultPayload?.AccountInfo?.TitleInfo?.DisplayName || null
-            this._applySession(result.data.PlayFabId, result.data.SessionTicket, name)
-            callback(null, result.data)
-        })
-    },
-
-    // Initiate Apple Sign-In flow and authenticate with PlayFab
-    loginWithApple(callback) {
-        if (typeof AppleID === 'undefined') {
-            callback(new Error('Apple Sign-In is not available. Check your connection.'), null)
-            return
-        }
-        if (this.APPLE_SERVICE_ID.startsWith('YOUR_APPLE_SERVICE_ID')) {
-            callback(new Error('Apple Sign-In is not configured. Set APPLE_SERVICE_ID in playfabConfig.js.'), null)
-            return
-        }
-        AppleID.auth.signIn().then((data) => {
-            this._playfabLoginApple(data.authorization.id_token, callback)
-        }).catch((err) => {
-            if (err && err.error === 'popup_closed_by_user') {
-                // User dismissed the popup – re-enable buttons silently
-                callback(null, null)
-            } else {
-                callback(new Error((err && err.error) || 'Apple Sign-In failed'), null)
-            }
-        })
-    },
-
-    _playfabLoginApple(identityToken, callback) {
-        if (typeof PlayFabClientSDK === 'undefined') {
-            callback(new Error('PlayFab SDK not loaded'), null)
-            return
-        }
-        PlayFabClientSDK.LoginWithApple({
-            IdentityToken: identityToken,
-            TitleId: this.TITLE_ID,
-            CreateAccount: true,
-            InfoRequestParameters: { GetUserAccountInfo: true }
-        }, (result, error) => {
-            if (error) {
-                callback(new Error(error.errorMessage || 'PlayFab Apple login failed'), null)
                 return
             }
             const name = result.data.InfoResultPayload?.AccountInfo?.TitleInfo?.DisplayName || null
