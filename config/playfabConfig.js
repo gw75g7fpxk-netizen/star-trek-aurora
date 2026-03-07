@@ -9,7 +9,7 @@ const PlayFabManager = {
     TITLE_ID: '1A2EEC',
 
     // Replace with your Google OAuth 2.0 Client ID (Web application type)
-    GOOGLE_CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+    GOOGLE_CLIENT_ID: '959296849138-3n2bpfspbkr04kk2s23p8era65fol16i.apps.googleusercontent.com',
 
     // Replace with your Apple Services ID configured for Sign In with Apple
     APPLE_SERVICE_ID: 'YOUR_APPLE_SERVICE_ID',
