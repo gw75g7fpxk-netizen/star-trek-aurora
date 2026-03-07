@@ -8,7 +8,7 @@ const PlayFabManager = {
     TITLE_ID: '1A2EEC',
 
     // Replace with your Google OAuth 2.0 Client ID (Web application type)
-    GOOGLE_CLIENT_ID: '959296849138-3n2bpfspbkr04kk2s23p8era65fol16i.apps.googleusercontent.com',
+    GOOGLE_CLIENT_ID: '661838243073-qca79m7g1ct4of9ron7fjbpcuftnp4k6.apps.googleusercontent.com',
 
     isLoggedIn: false,
     playFabId: null,
