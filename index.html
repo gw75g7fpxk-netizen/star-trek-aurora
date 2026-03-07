@@ -34,12 +34,123 @@
             width: 100vw !important;
             height: 100vh !important;
         }
+
+        /* Crew Authentication Modal */
+        #login-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(0, 0, 0, 0.85);
+            align-items: center;
+            justify-content: center;
+            touch-action: auto;
+        }
+        #login-panel {
+            background: #0d1117;
+            border: 2px solid #FF9900;
+            border-radius: 12px;
+            padding: 32px 28px 24px;
+            width: min(340px, 88vw);
+            font-family: 'Antonio', 'Oswald', Arial, sans-serif;
+            text-align: center;
+        }
+        #login-panel h2 {
+            color: #FF9900;
+            font-size: 22px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            margin-bottom: 4px;
+        }
+        #login-panel .subtitle {
+            color: #666;
+            font-size: 12px;
+            letter-spacing: 1px;
+            margin-bottom: 24px;
+        }
+        #login-message {
+            font-size: 13px;
+            min-height: 18px;
+            margin-bottom: 16px;
+            color: #AAAAEE;
+        }
+        .login-btn {
+            display: block;
+            width: 100%;
+            padding: 13px;
+            margin-bottom: 12px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .login-btn:hover { opacity: 0.85; }
+        #btn-google-login { background: #4285F4; color: #fff; }
+        #btn-logout       { background: #CC4444; color: #fff; }
+        #btn-cancel       {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: transparent;
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: #888;
+            font-family: inherit;
+            font-size: 14px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+        #btn-cancel:hover { border-color: #888; color: #aaa; }
+        #login-user-label { color: #00CCCC; font-size: 14px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
+    <!-- Crew Authentication Modal -->
+    <div id="login-modal">
+        <div id="login-panel">
+            <h2>CREW AUTHENTICATION</h2>
+            <div class="subtitle">USS AURORA SECURE LINK</div>
+            <div id="login-message"></div>
+
+            <!-- Not logged in: show provider buttons -->
+            <div id="login-options">
+                <button id="btn-google-login" class="login-btn" onclick="LoginModal.triggerGoogle()">
+                    &#9654; Login with Google
+                </button>
+            </div>
+
+            <!-- Logged in: show status and logout -->
+            <div id="login-status-panel" style="display:none">
+                <div id="login-user-label"></div>
+                <button id="btn-logout" class="login-btn" onclick="LoginModal.triggerLogout()">
+                    LOGOUT
+                </button>
+            </div>
+
+            <button id="btn-cancel" onclick="LoginModal.hide()">CANCEL</button>
+        </div>
+    </div>
+
     <!-- Phaser 3.80.1 (local) -->
     <script src="phaser.min.js"></script>
+
+    <!-- Microsoft Azure PlayFab SDK -->
+    <script src="https://download.playfab.com/PlayFabClientApi.js"></script>
+
+    <!-- Google Identity Services (async – available by first user interaction) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     
+    <!-- PlayFab & Login -->
+    <script src="config/playfabConfig.js"></script>
+    <script src="config/loginModal.js"></script>
+
     <!-- Game Configuration -->
     <script src="config/gameConfig.js"></script>
     <script src="config/playerConfig.js"></script>

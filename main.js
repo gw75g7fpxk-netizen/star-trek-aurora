@@ -1,6 +1,11 @@
 // Main game entry point
 console.log('Star Trek Aurora - Initializing...');
 
+// Initialize PlayFab authentication (restores any existing session)
+if (typeof PlayFabManager !== 'undefined') {
+    PlayFabManager.initialize();
+}
+
 // Configure scenes
 GameConfig.scene = [
     BootScene, 
